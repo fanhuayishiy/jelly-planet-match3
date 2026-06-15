@@ -592,6 +592,21 @@
       animation: color-spin 1.8s linear infinite;
     }
 
+    .tile[data-type="0"] {
+      box-shadow:
+        inset 0 2px rgba(255, 255, 255, .72),
+        inset 0 -8px 16px rgba(130, 19, 88, .16),
+        0 10px 18px rgba(60, 50, 83, .16);
+    }
+
+    .tile[data-type="4"] {
+      box-shadow:
+        inset 0 2px rgba(255, 255, 255, .5),
+        inset 0 -10px 18px rgba(35, 0, 13, .34),
+        0 10px 18px rgba(60, 50, 83, .18);
+      outline: 1px solid rgba(80, 0, 24, .18);
+    }
+
     .tile.pop {
       animation: pop 280ms ease forwards;
     }
@@ -972,11 +987,11 @@
       </div>
 
       <div class="start-mini-board" aria-hidden="true">
-        <span class="start-gem" style="--c1:#ff6b91;--c2:#d92f66;--delay:0ms">🍓</span>
+        <span class="start-gem" style="--c1:#ff91c8;--c2:#e83f9c;--delay:0ms">🍓</span>
         <span class="start-gem" style="--c1:#ffc05c;--c2:#f07d22;--delay:80ms">🍊</span>
         <span class="start-gem" style="--c1:#ffe96a;--c2:#d7b80f;--delay:160ms">🍋</span>
         <span class="start-gem" style="--c1:#a879ff;--c2:#7044d8;--delay:240ms">🍇</span>
-        <span class="start-gem" style="--c1:#ff5f73;--c2:#b91337;--delay:320ms">🍒</span>
+        <span class="start-gem" style="--c1:#d7193f;--c2:#6f0620;--delay:320ms">🍒</span>
       </div>
 
       <div class="start-actions">
@@ -1089,11 +1104,11 @@
       const SPECIAL_COLOR = "color";
 
       const TYPES = [
-        { icon: "🍓", c1: "#ff6b91", c2: "#d92f66", name: "草莓" },
+        { icon: "🍓", c1: "#ff91c8", c2: "#e83f9c", name: "草莓" },
         { icon: "🍊", c1: "#ffc05c", c2: "#f07d22", name: "橙子" },
         { icon: "🍋", c1: "#ffe96a", c2: "#d7b80f", name: "柠檬" },
         { icon: "🍇", c1: "#a879ff", c2: "#7044d8", name: "葡萄" },
-        { icon: "🍒", c1: "#ff5f73", c2: "#b91337", name: "樱桃" },
+        { icon: "🍒", c1: "#d7193f", c2: "#6f0620", name: "樱桃" },
         { icon: "🥝", c1: "#9bea71", c2: "#39a949", name: "猕猴桃" }
       ];
 
@@ -1205,6 +1220,7 @@
             tile.className = "tile";
             tile.dataset.row = String(row);
             tile.dataset.col = String(col);
+            tile.dataset.type = String(cell.type);
             tile.style.setProperty("--c1", tileData.c1);
             tile.style.setProperty("--c2", tileData.c2);
             tile.setAttribute("role", "gridcell");
