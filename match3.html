@@ -1386,8 +1386,7 @@
               const first = { row, col };
               const a = board[first.row][first.col];
               const b = board[next.row][next.col];
-              if (a.special && b.special) return [first, next];
-              if (a.special === SPECIAL_COLOR || b.special === SPECIAL_COLOR) return [first, next];
+              if (a.special || b.special) return [first, next];
               if (wouldMatchAfterSwap(first, next)) return [first, next];
             }
           }
@@ -1728,9 +1727,7 @@
       function canDirectActivateSpecial(swappedPair) {
         if (!swappedPair) return false;
         const cells = swappedPair.map(({ row, col }) => board[row][col]).filter(Boolean);
-        const colorSwap = cells.some((cell) => cell.special === SPECIAL_COLOR);
-        const specialCombo = cells.length === 2 && cells.every((cell) => cell.special);
-        return colorSwap || specialCombo;
+        return cells.some((cell) => cell.special);
       }
 
       function spawnEffects(matches, text, combo = 1, specialCount = 0) {
