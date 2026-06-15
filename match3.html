@@ -110,6 +110,67 @@
       gap: 8px;
     }
 
+    .booster-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px;
+      padding: 10px;
+    }
+
+    .booster-btn {
+      min-width: 0;
+      min-height: 48px;
+      border: 1px solid var(--stroke);
+      border-radius: 17px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .38);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .58), 0 8px 20px rgba(70, 59, 92, .1);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 950;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .booster-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, .56);
+    }
+
+    .booster-btn.active {
+      box-shadow:
+        0 0 0 3px rgba(255, 255, 255, .78),
+        0 0 0 7px rgba(37, 50, 69, .14),
+        inset 0 1px rgba(255, 255, 255, .7);
+    }
+
+    .booster-btn:disabled {
+      cursor: not-allowed;
+      opacity: .42;
+      transform: none;
+    }
+
+    .booster-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .booster-count {
+      min-width: 23px;
+      min-height: 23px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: white;
+      background: rgba(37, 50, 69, .44);
+      font-size: 12px;
+      box-shadow: inset 0 1px rgba(255, 255, 255, .32);
+    }
+
     .icon-btn,
     .primary-btn {
       border: 1px solid var(--stroke);
@@ -332,6 +393,15 @@
         inset 0 2px rgba(255, 255, 255, .72),
         inset 0 -8px 16px rgba(43, 35, 60, .18),
         0 18px 24px rgba(60, 50, 83, .22);
+    }
+
+    .tile.hint {
+      animation: hint-pulse 760ms ease-in-out infinite alternate;
+    }
+
+    .tile.booster-target {
+      cursor: crosshair;
+      animation: target-pulse 620ms ease-in-out infinite alternate;
     }
 
     .tile.special {
@@ -661,6 +731,30 @@
       100% { opacity: 0; transform: translate(-50%, -72%) scale(.92); }
     }
 
+    @keyframes hint-pulse {
+      to {
+        transform: translateY(-4px) scale(1.08);
+        filter: brightness(1.22) saturate(1.25);
+        box-shadow:
+          0 0 0 4px rgba(255, 255, 255, .82),
+          0 0 22px rgba(255, 255, 255, .78),
+          inset 0 2px rgba(255, 255, 255, .72),
+          inset 0 -8px 16px rgba(43, 35, 60, .18);
+      }
+    }
+
+    @keyframes target-pulse {
+      to {
+        transform: scale(1.06);
+        filter: brightness(1.18);
+        box-shadow:
+          0 0 0 4px rgba(255, 255, 255, .82),
+          0 0 0 8px rgba(255, 77, 125, .22),
+          inset 0 2px rgba(255, 255, 255, .72),
+          inset 0 -8px 16px rgba(43, 35, 60, .18);
+      }
+    }
+
     @keyframes toast {
       0% { opacity: 0; transform: translateX(-50%) translateY(-120%); }
       16%, 84% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -683,6 +777,10 @@
       }
 
       .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .booster-bar {
         grid-template-columns: repeat(2, 1fr);
       }
 
@@ -747,6 +845,21 @@
       </div>
     </section>
 
+    <section class="booster-bar panel" aria-label="游戏道具">
+      <button class="booster-btn" id="hintBtn" type="button" aria-label="提示可消步骤">
+        <span class="booster-icon">?</span><span>提示</span><span class="booster-count" id="hintCount">∞</span>
+      </button>
+      <button class="booster-btn" id="hammerBtn" type="button" aria-label="锤子道具">
+        <span class="booster-icon">🔨</span><span>锤子</span><span class="booster-count" id="hammerCount">0</span>
+      </button>
+      <button class="booster-btn" id="shuffleBtn" type="button" aria-label="洗牌道具">
+        <span class="booster-icon">↻</span><span>洗牌</span><span class="booster-count" id="shuffleCount">0</span>
+      </button>
+      <button class="booster-btn" id="rainbowBtn" type="button" aria-label="彩虹道具">
+        <span class="booster-icon">★</span><span>彩虹</span><span class="booster-count" id="rainbowCount">0</span>
+      </button>
+    </section>
+
     <section class="board-wrap panel" id="boardWrap">
       <div class="board" id="board" role="grid" aria-label="8乘8消消乐棋盘"></div>
     </section>
@@ -794,11 +907,11 @@
       ];
 
       const LEVELS = [
-        { name: "第 1 关：晨露果园", targetScore: 850, moves: 22, goals: { 0: 8, 1: 8 }, tip: "收集草莓和橙子" },
-        { name: "第 2 关：柠檬汽水", targetScore: 1450, moves: 24, goals: { 2: 12, 5: 8 }, tip: "柠檬越多越好" },
-        { name: "第 3 关：葡萄风暴", targetScore: 2200, moves: 25, goals: { 3: 14, 4: 10 }, tip: "制造 4 连火箭" },
-        { name: "第 4 关：樱桃爆裂", targetScore: 3200, moves: 27, goals: { 4: 16, 0: 12, 1: 12 }, tip: "5 连会生成彩虹糖" },
-        { name: "第 5 关：彩虹终章", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, tip: "连锁触发特殊果冻" }
+        { name: "第 1 关：晨露果园", targetScore: 850, moves: 22, goals: { 0: 8, 1: 8 }, boosters: { hammer: 1, shuffle: 1, rainbow: 0 }, tip: "收集草莓和橙子" },
+        { name: "第 2 关：柠檬汽水", targetScore: 1450, moves: 24, goals: { 2: 12, 5: 8 }, boosters: { hammer: 1, shuffle: 1, rainbow: 1 }, tip: "柠檬越多越好" },
+        { name: "第 3 关：葡萄风暴", targetScore: 2200, moves: 25, goals: { 3: 14, 4: 10 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "制造 4 连火箭" },
+        { name: "第 4 关：樱桃爆裂", targetScore: 3200, moves: 27, goals: { 4: 16, 0: 12, 1: 12 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "5 连会生成彩虹糖" },
+        { name: "第 5 关：彩虹终章", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "连锁触发特殊果冻" }
       ];
 
       const boardEl = document.getElementById("board");
@@ -822,6 +935,13 @@
       const comboBannerEl = document.getElementById("comboBanner");
       const comboTitleEl = document.getElementById("comboTitle");
       const comboSubtitleEl = document.getElementById("comboSubtitle");
+      const hintBtn = document.getElementById("hintBtn");
+      const hammerBtn = document.getElementById("hammerBtn");
+      const shuffleBtn = document.getElementById("shuffleBtn");
+      const rainbowBtn = document.getElementById("rainbowBtn");
+      const hammerCountEl = document.getElementById("hammerCount");
+      const shuffleCountEl = document.getElementById("shuffleCount");
+      const rainbowCountEl = document.getElementById("rainbowCount");
       const modalEl = document.getElementById("modal");
       const modalTitleEl = document.getElementById("modalTitle");
       const modalTextEl = document.getElementById("modalText");
@@ -841,6 +961,9 @@
       let activePointerId = null;
       let audioContext = null;
       let soundEnabled = localStorage.getItem("match3Sound") !== "off";
+      let boosterMode = "";
+      let boosterCounts = { hammer: 0, shuffle: 0, rainbow: 0 };
+      let hintCells = new Set();
 
       const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
       const indexOf = (row, col) => row * SIZE + col;
@@ -909,6 +1032,14 @@
               tile.classList.add("drop");
             }
 
+            if (hintCells.has(keyOf(row, col))) {
+              tile.classList.add("hint");
+            }
+
+            if (boosterMode === "hammer") {
+              tile.classList.add("booster-target");
+            }
+
             fragment.appendChild(tile);
           }
         }
@@ -943,6 +1074,18 @@
         progressBarEl.style.width = `${Math.min(100, Math.round((score / level.targetScore) * 100))}%`;
         renderGoals();
         updateSoundButton();
+        updateBoosterButtons();
+      }
+
+      function updateBoosterButtons() {
+        hammerCountEl.textContent = String(boosterCounts.hammer);
+        shuffleCountEl.textContent = String(boosterCounts.shuffle);
+        rainbowCountEl.textContent = String(boosterCounts.rainbow);
+        hammerBtn.disabled = boosterCounts.hammer <= 0 || locked || levelEnded;
+        shuffleBtn.disabled = boosterCounts.shuffle <= 0 || locked || levelEnded;
+        rainbowBtn.disabled = boosterCounts.rainbow <= 0 || locked || levelEnded;
+        hintBtn.disabled = locked || levelEnded;
+        hammerBtn.classList.toggle("active", boosterMode === "hammer");
       }
 
       function updateSoundButton() {
@@ -979,6 +1122,37 @@
         const temp = board[a.row][a.col];
         board[a.row][a.col] = board[b.row][b.col];
         board[b.row][b.col] = temp;
+      }
+
+      function findValidMove() {
+        const directions = [
+          { row: 0, col: 1 },
+          { row: 1, col: 0 }
+        ];
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            for (const direction of directions) {
+              const next = { row: row + direction.row, col: col + direction.col };
+              if (!inBounds(next.row, next.col)) continue;
+              const first = { row, col };
+              const a = board[first.row][first.col];
+              const b = board[next.row][next.col];
+              if (a.special && b.special) return [first, next];
+              if (a.special === SPECIAL_COLOR || b.special === SPECIAL_COLOR) return [first, next];
+              if (wouldMatchAfterSwap(first, next)) return [first, next];
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function wouldMatchAfterSwap(first, second) {
+        swapCells(first, second);
+        const hasMatch = findMatches().matched.size > 0;
+        swapCells(first, second);
+        return hasMatch;
       }
 
       function findMatches() {
@@ -1084,21 +1258,34 @@
         const queue = [...baseMatches].map((key) => key.split(",").map(Number));
 
         if (swappedPair) {
-          swappedPair.forEach(({ row, col }) => {
-            const cell = board[row][col];
-            if (cell && cell.special === SPECIAL_COLOR) {
-              const other = swappedPair.find((p) => p.row !== row || p.col !== col);
-              const targetType = other ? board[other.row][other.col].type : cell.type;
-              for (let r = 0; r < SIZE; r++) {
-                for (let c = 0; c < SIZE; c++) {
-                  if (board[r][c] && board[r][c].type === targetType) {
-                    result.add(keyOf(r, c));
-                    queue.push([r, c]);
+          const swappedCells = swappedPair.map(({ row, col }) => board[row][col]).filter(Boolean);
+          const doubleColor = swappedCells.length === 2 && swappedCells.every((cell) => cell.special === SPECIAL_COLOR);
+          if (doubleColor) {
+            for (let r = 0; r < SIZE; r++) {
+              for (let c = 0; c < SIZE; c++) {
+                result.add(keyOf(r, c));
+                queue.push([r, c]);
+              }
+            }
+          }
+
+          if (!doubleColor) {
+            swappedPair.forEach(({ row, col }) => {
+              const cell = board[row][col];
+              if (cell && cell.special === SPECIAL_COLOR) {
+                const other = swappedPair.find((p) => p.row !== row || p.col !== col);
+                const targetType = other ? board[other.row][other.col].type : cell.type;
+                for (let r = 0; r < SIZE; r++) {
+                  for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] && board[r][c].type === targetType) {
+                      result.add(keyOf(r, c));
+                      queue.push([r, c]);
+                    }
                   }
                 }
               }
-            }
-          });
+            });
+          }
         }
 
         const seenSpecial = new Set();
@@ -1184,6 +1371,52 @@
         return dropped;
       }
 
+      function shuffleArray(items) {
+        for (let i = items.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [items[i], items[j]] = [items[j], items[i]];
+        }
+        return items;
+      }
+
+      function shuffleBoard() {
+        const cells = shuffleArray(board.flat().filter(Boolean));
+
+        for (let attempt = 0; attempt < 50; attempt++) {
+          const shuffled = shuffleArray([...cells]);
+          for (let row = 0; row < SIZE; row++) {
+            for (let col = 0; col < SIZE; col++) {
+              board[row][col] = shuffled[indexOf(row, col)];
+            }
+          }
+
+          if (findMatches().matched.size === 0 && findValidMove()) {
+            return true;
+          }
+        }
+
+        createBoard();
+        return true;
+      }
+
+      async function ensurePlayableBoard() {
+        if (levelEnded || findValidMove()) {
+          updateUI();
+          return;
+        }
+        announce("没有可消步骤，自动洗牌！");
+        showToast("棋盘无解，自动洗牌");
+        playSound("special", 2);
+        vibrate([20, 20, 40]);
+        await sleep(260);
+        shuffleBoard();
+        hintCells.clear();
+        render(new Set(Array.from({ length: SIZE * SIZE }, (_, i) => keyOf(Math.floor(i / SIZE), i % SIZE))));
+        triggerScreenShake(2, 1);
+        await sleep(ANIMATION_MS);
+        await resolveBoard();
+      }
+
       async function resolveBoard(options = {}) {
         let combo = 0;
         let analysis = findMatches();
@@ -1226,20 +1459,30 @@
         if (combo > 0) {
           announce(`棋盘稳定，最高连击 x${bestCombo}`);
         }
+        await ensurePlayableBoard();
       }
 
       function getForcedSpecialMatches(swappedPair) {
         const forced = new Set();
         if (!swappedPair) return forced;
+        if (!canDirectActivateSpecial(swappedPair)) return forced;
 
         swappedPair.forEach(({ row, col }) => {
           const cell = board[row][col];
-          if (cell && cell.special === SPECIAL_COLOR) {
+          if (cell && cell.special) {
             forced.add(keyOf(row, col));
           }
         });
 
         return forced;
+      }
+
+      function canDirectActivateSpecial(swappedPair) {
+        if (!swappedPair) return false;
+        const cells = swappedPair.map(({ row, col }) => board[row][col]).filter(Boolean);
+        const colorSwap = cells.some((cell) => cell.special === SPECIAL_COLOR);
+        const specialCombo = cells.length === 2 && cells.every((cell) => cell.special);
+        return colorSwap || specialCombo;
       }
 
       function spawnEffects(matches, text, combo = 1, specialCount = 0) {
@@ -1337,6 +1580,118 @@
         toastEl.classList.remove("show");
         void toastEl.offsetWidth;
         toastEl.classList.add("show");
+      }
+
+      function showHint() {
+        if (locked || levelEnded) return;
+        const move = findValidMove();
+        hintCells.clear();
+
+        if (!move) {
+          ensurePlayableBoard();
+          return;
+        }
+
+        move.forEach((cell) => hintCells.add(keyOf(cell.row, cell.col)));
+        selected = null;
+        boosterMode = "";
+        render();
+        showToast("高亮的两个水果可以交换");
+        playSound("select");
+      }
+
+      function toggleHammerMode() {
+        if (locked || levelEnded || boosterCounts.hammer <= 0) return;
+        boosterMode = boosterMode === "hammer" ? "" : "hammer";
+        hintCells.clear();
+        selected = null;
+        render();
+        updateBoosterButtons();
+        announce(boosterMode === "hammer" ? "锤子已就绪，点一个水果清掉周围一圈" : "已取消锤子");
+        playSound("select");
+      }
+
+      async function useShuffleBooster() {
+        if (locked || levelEnded || boosterCounts.shuffle <= 0) return;
+        locked = true;
+        boosterCounts.shuffle -= 1;
+        boosterMode = "";
+        hintCells.clear();
+        selected = null;
+        updateUI();
+        announce("手动洗牌，重新找机会！");
+        showToast("洗牌！");
+        playSound("special", 2);
+        shuffleBoard();
+        render(new Set(Array.from({ length: SIZE * SIZE }, (_, i) => keyOf(Math.floor(i / SIZE), i % SIZE))));
+        triggerScreenShake(2, 1);
+        await sleep(ANIMATION_MS);
+        await resolveBoard();
+        locked = false;
+        updateUI();
+        await checkLevelEnd();
+      }
+
+      async function useRainbowBooster() {
+        if (locked || levelEnded || boosterCounts.rainbow <= 0) return;
+        const move = findValidMove();
+        const target = selected || (move ? move[0] : { row: Math.floor(SIZE / 2), col: Math.floor(SIZE / 2) });
+        const cell = board[target.row][target.col];
+        if (!cell) return;
+
+        locked = true;
+        boosterCounts.rainbow -= 1;
+        boosterMode = "";
+        hintCells.clear();
+        selected = null;
+        board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR);
+        render();
+        updateUI();
+        showToast("彩虹糖已放入棋盘");
+        announce("彩虹糖已就绪，和任意相邻水果交换会清掉同色水果");
+        spawnEffects(new Set([keyOf(target.row, target.col)]), "★", 2, 1);
+        playSound("special", 2);
+        locked = false;
+        updateUI();
+        await ensurePlayableBoard();
+      }
+
+      async function useHammer(row, col) {
+        if (locked || levelEnded || boosterCounts.hammer <= 0) return;
+        locked = true;
+        boosterCounts.hammer -= 1;
+        boosterMode = "";
+        hintCells.clear();
+        selected = null;
+
+        const base = new Set();
+        for (let r = row - 1; r <= row + 1; r++) {
+          for (let c = col - 1; c <= col + 1; c++) {
+            if (inBounds(r, c) && board[r][c]) base.add(keyOf(r, c));
+          }
+        }
+
+        const expanded = expandSpecials(base, null);
+        const matches = expanded.cells;
+        const gained = matches.size * 15 + expanded.specialCount * 80;
+        score += gained;
+        specialsTriggered += 1;
+        updateUI();
+        announce(`锤子粉碎 ${matches.size} 个，+${gained}`);
+        spawnEffects(matches, `+${gained}`, 2, Math.max(1, expanded.specialCount));
+        showComboBanner(2, gained, Math.max(1, expanded.specialCount));
+        triggerBoardBurst();
+        triggerScreenShake(2, 1);
+        playSound("special", 2);
+        await animateMatches(matches, "flash");
+        collectAndRemove(matches, new Map());
+        const dropped = collapseBoard();
+        render(dropped);
+        await sleep(ANIMATION_MS);
+        await resolveBoard();
+        locked = false;
+        updateUI();
+        await checkLevelEnd();
       }
 
       function announce(text) {
@@ -1459,7 +1814,13 @@
         if (locked || levelEnded || !inBounds(row, col)) return;
         initAudio();
 
+        if (boosterMode === "hammer") {
+          await useHammer(row, col);
+          return;
+        }
+
         const current = { row, col };
+        hintCells.clear();
 
         if (!selected) {
           selected = current;
@@ -1497,7 +1858,7 @@
         render();
         await sleep(120);
 
-        const directSpecial = [first, current].some(({ row: r, col: c }) => board[r][c].special === SPECIAL_COLOR);
+        const directSpecial = canDirectActivateSpecial([first, current]);
         const analysis = findMatches();
         if (analysis.matched.size === 0 && !directSpecial) {
           announce("这步没有形成三连，已经弹回，步数返还");
@@ -1514,13 +1875,15 @@
           updateUI();
           bumpStats(movesEl);
           locked = false;
+          updateUI();
           return;
         }
 
-        if (directSpecial) showToast("彩虹糖触发：同色清屏！");
+        if (directSpecial) showToast("特殊果冻组合触发！");
         if (directSpecial) playSound("special", 3);
         await resolveBoard({ preferred: current, swappedPair: [first, current] });
         locked = false;
+        updateUI();
         await checkLevelEnd();
       }
 
@@ -1548,6 +1911,9 @@
         specialsTriggered = 0;
         movesLeft = level.moves;
         collected = {};
+        boosterCounts = { ...level.boosters };
+        boosterMode = "";
+        hintCells.clear();
         hideModal();
         createBoard();
         render();
@@ -1557,6 +1923,7 @@
         await resolveBoard();
         announce(`${level.tip}，点选两个相邻果冻开始`);
         locked = false;
+        updateUI();
       }
 
       function nextLevel() {
@@ -1566,6 +1933,10 @@
 
       boardEl.addEventListener("pointerdown", handlePointerDown);
       soundBtn.addEventListener("click", toggleSound);
+      hintBtn.addEventListener("click", showHint);
+      hammerBtn.addEventListener("click", toggleHammerMode);
+      shuffleBtn.addEventListener("click", useShuffleBooster);
+      rainbowBtn.addEventListener("click", useRainbowBooster);
       resetBtn.addEventListener("click", () => startLevel(levelIndex));
       prevBtn.addEventListener("click", () => startLevel(levelIndex - 1));
       nextBtn.addEventListener("click", () => startLevel(levelIndex + 1));
