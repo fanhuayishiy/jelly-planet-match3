@@ -533,6 +533,29 @@
       filter: saturate(1.14);
     }
 
+    .tile.drag-source {
+      z-index: 5;
+      transform: translate(var(--drag-x, 0), var(--drag-y, 0)) scale(1.09);
+      filter: brightness(1.12) saturate(1.18);
+      box-shadow:
+        0 0 0 4px rgba(255, 255, 255, .86),
+        0 22px 34px rgba(37, 50, 69, .26),
+        inset 0 2px rgba(255, 255, 255, .72),
+        inset 0 -8px 16px rgba(43, 35, 60, .18);
+      transition: transform 80ms ease-out, box-shadow 120ms ease, filter 120ms ease;
+    }
+
+    .tile.drag-target {
+      transform: scale(.94);
+      filter: brightness(1.18) saturate(1.2);
+      box-shadow:
+        0 0 0 4px rgba(255, 255, 255, .78),
+        0 0 0 8px rgba(56, 232, 199, .24),
+        inset 0 2px rgba(255, 255, 255, .72),
+        inset 0 -8px 16px rgba(43, 35, 60, .18),
+        0 14px 24px rgba(60, 50, 83, .18);
+    }
+
     .tile.hint {
       animation: hint-pulse 760ms ease-in-out infinite alternate;
     }
@@ -1314,6 +1337,35 @@
         return boardEl.children[indexOf(row, col)];
       }
 
+      function clearDragPreview() {
+        boardEl.querySelectorAll(".drag-source, .drag-target").forEach((tile) => {
+          tile.classList.remove("drag-source", "drag-target");
+          tile.style.removeProperty("--drag-x");
+          tile.style.removeProperty("--drag-y");
+        });
+      }
+
+      function updateDragPreview(target, deltaX, deltaY) {
+        if (!dragState) return;
+        clearDragPreview();
+
+        const sourceTile = getTile(dragState.row, dragState.col);
+        const targetTile = target && inBounds(target.row, target.col) ? getTile(target.row, target.col) : null;
+        if (!sourceTile) return;
+
+        const rect = sourceTile.getBoundingClientRect();
+        const maxOffset = rect.width * .62;
+        const distance = Math.hypot(deltaX, deltaY) || 1;
+        const ratio = Math.min(maxOffset, distance) / distance;
+        sourceTile.style.setProperty("--drag-x", `${Math.round(deltaX * ratio)}px`);
+        sourceTile.style.setProperty("--drag-y", `${Math.round(deltaY * ratio)}px`);
+        sourceTile.classList.add("drag-source");
+
+        if (targetTile) {
+          targetTile.classList.add("drag-target");
+        }
+      }
+
       function swapCells(a, b) {
         const temp = board[a.row][a.col];
         board[a.row][a.col] = board[b.row][b.col];
@@ -2089,6 +2141,7 @@
           currentCol: col,
           hasMoved: false
         };
+        updateDragPreview(null, 0, 0);
         playSound("select");
         vibrate(8);
       }
@@ -2109,10 +2162,18 @@
           col: dragState.col + (horizontal ? Math.sign(deltaX) : 0)
         };
 
-        if (!inBounds(target.row, target.col)) return;
+        if (!inBounds(target.row, target.col)) {
+          dragState.currentRow = dragState.row;
+          dragState.currentCol = dragState.col;
+          dragState.hasMoved = false;
+          updateDragPreview(null, deltaX, deltaY);
+          return;
+        }
+
         dragState.currentRow = target.row;
         dragState.currentCol = target.col;
         dragState.hasMoved = true;
+        updateDragPreview(target, deltaX, deltaY);
       }
 
       function handlePointerUp(event) {
@@ -2121,6 +2182,7 @@
         const current = { row: dragState.currentRow, col: dragState.currentCol };
         const shouldSwap = dragState.hasMoved && isAdjacent(first, current);
         dragState = null;
+        clearDragPreview();
 
         if (!shouldSwap) {
           announce("按住水果拖到相邻格子交换");
@@ -2136,6 +2198,7 @@
       function handlePointerCancel(event) {
         if (event.pointerId !== activePointerId) return;
         dragState = null;
+        clearDragPreview();
         activePointerId = null;
       }
 
