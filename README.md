@@ -4,6 +4,10 @@
 
 ## 在线运行
 
+在线试玩：
+
+https://fanhuayishiy.github.io/jelly-planet-match3/
+
 本地打开：
 
 ```bash
