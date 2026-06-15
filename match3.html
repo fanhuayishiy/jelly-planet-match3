@@ -252,6 +252,10 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .value.bump {
+      animation: value-bump 320ms cubic-bezier(.2, .85, .25, 1);
+    }
+
     .board-wrap {
       position: relative;
       display: grid;
@@ -262,6 +266,10 @@
 
     .board-wrap.burst {
       animation: board-burst 360ms ease;
+    }
+
+    body.juicy-shake .game-shell {
+      animation: screen-shake 260ms ease;
     }
 
     .board {
@@ -411,6 +419,32 @@
       animation: particle 620ms ease-out forwards;
     }
 
+    .spark {
+      width: 5px;
+      height: 24px;
+      position: fixed;
+      left: var(--x);
+      top: var(--y);
+      border-radius: 999px;
+      background: linear-gradient(180deg, white, var(--color));
+      box-shadow: 0 0 18px var(--color);
+      transform: rotate(var(--rotate));
+      animation: spark 760ms ease-out forwards;
+    }
+
+    .shockwave {
+      width: 18px;
+      height: 18px;
+      position: fixed;
+      left: var(--x);
+      top: var(--y);
+      border: 3px solid rgba(255, 255, 255, .88);
+      border-radius: 50%;
+      box-shadow: 0 0 20px var(--color), inset 0 0 14px var(--color);
+      transform: translate(-50%, -50%);
+      animation: shockwave 580ms ease-out forwards;
+    }
+
     .float-score {
       position: fixed;
       left: var(--x);
@@ -444,6 +478,44 @@
 
     .toast.show {
       animation: toast 1600ms ease both;
+    }
+
+    .combo-banner {
+      position: fixed;
+      left: 50%;
+      top: 48%;
+      z-index: 24;
+      display: grid;
+      gap: 4px;
+      place-items: center;
+      min-width: min(86vw, 340px);
+      padding: 16px 18px;
+      border: 1px solid rgba(255, 255, 255, .76);
+      border-radius: 26px;
+      color: white;
+      background: rgba(255, 255, 255, .16);
+      box-shadow: 0 26px 80px rgba(37, 50, 69, .25), inset 0 1px rgba(255, 255, 255, .55);
+      backdrop-filter: blur(18px) saturate(170%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(.82);
+      text-shadow: 0 5px 22px rgba(37, 50, 69, .35);
+    }
+
+    .combo-banner.show {
+      animation: combo-pop 820ms cubic-bezier(.16, .9, .22, 1.18) both;
+    }
+
+    .combo-title {
+      font-size: clamp(34px, 10vw, 72px);
+      line-height: .9;
+      font-weight: 950;
+    }
+
+    .combo-subtitle {
+      font-size: 14px;
+      font-weight: 950;
+      opacity: .9;
     }
 
     .modal {
@@ -555,6 +627,40 @@
       to { transform: scale(1); filter: none; }
     }
 
+    @keyframes value-bump {
+      45% { transform: translateY(-2px) scale(1.18); filter: brightness(1.16); }
+      to { transform: translateY(0) scale(1); filter: none; }
+    }
+
+    @keyframes screen-shake {
+      15% { transform: translateX(-5px) rotate(-.35deg); }
+      35% { transform: translateX(5px) rotate(.35deg); }
+      55% { transform: translateX(-3px) rotate(-.2deg); }
+      75% { transform: translateX(3px) rotate(.2deg); }
+      to { transform: translateX(0) rotate(0); }
+    }
+
+    @keyframes spark {
+      to {
+        opacity: 0;
+        transform: translate(var(--dx), var(--dy)) rotate(var(--rotate)) scale(.18);
+      }
+    }
+
+    @keyframes shockwave {
+      to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(5.8);
+      }
+    }
+
+    @keyframes combo-pop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.78) rotate(-2deg); }
+      18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(1deg); }
+      62% { opacity: 1; transform: translate(-50%, -54%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -72%) scale(.92); }
+    }
+
     @keyframes toast {
       0% { opacity: 0; transform: translateX(-50%) translateY(-120%); }
       16%, 84% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -605,6 +711,7 @@
       </div>
       <div class="actions">
         <button class="icon-btn" id="prevBtn" type="button" aria-label="上一关" title="上一关">‹</button>
+        <button class="icon-btn" id="soundBtn" type="button" aria-label="音效开关" title="音效开关">♪</button>
         <button class="icon-btn" id="resetBtn" type="button" aria-label="重新开始" title="重新开始">↻</button>
         <button class="icon-btn" id="nextBtn" type="button" aria-label="下一关" title="下一关">›</button>
       </div>
@@ -650,6 +757,10 @@
 
   <div class="effects" id="effects" aria-hidden="true"></div>
   <div class="toast" id="toast"></div>
+  <div class="combo-banner" id="comboBanner" aria-hidden="true">
+    <div class="combo-title" id="comboTitle">COMBO x2</div>
+    <div class="combo-subtitle" id="comboSubtitle">甜蜜连锁</div>
+  </div>
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="dialog">
       <h2 class="dialog-title" id="modalTitle">关卡完成</h2>
@@ -704,9 +815,13 @@
       const progressBarEl = document.getElementById("progressBar");
       const resetBtn = document.getElementById("resetBtn");
       const prevBtn = document.getElementById("prevBtn");
+      const soundBtn = document.getElementById("soundBtn");
       const nextBtn = document.getElementById("nextBtn");
       const effectsEl = document.getElementById("effects");
       const toastEl = document.getElementById("toast");
+      const comboBannerEl = document.getElementById("comboBanner");
+      const comboTitleEl = document.getElementById("comboTitle");
+      const comboSubtitleEl = document.getElementById("comboSubtitle");
       const modalEl = document.getElementById("modal");
       const modalTitleEl = document.getElementById("modalTitle");
       const modalTextEl = document.getElementById("modalText");
@@ -724,6 +839,8 @@
       let locked = false;
       let levelEnded = false;
       let activePointerId = null;
+      let audioContext = null;
+      let soundEnabled = localStorage.getItem("match3Sound") !== "off";
 
       const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
       const indexOf = (row, col) => row * SIZE + col;
@@ -825,6 +942,23 @@
         levelPillEl.textContent = `第 ${levelIndex + 1} / ${LEVELS.length} 关`;
         progressBarEl.style.width = `${Math.min(100, Math.round((score / level.targetScore) * 100))}%`;
         renderGoals();
+        updateSoundButton();
+      }
+
+      function updateSoundButton() {
+        soundBtn.textContent = soundEnabled ? "♪" : "×";
+        soundBtn.setAttribute("aria-pressed", String(soundEnabled));
+        soundBtn.title = soundEnabled ? "关闭音效" : "开启音效";
+      }
+
+      function bumpValue(element) {
+        element.classList.remove("bump");
+        void element.offsetWidth;
+        element.classList.add("bump");
+      }
+
+      function bumpStats(...elements) {
+        elements.forEach((element) => bumpValue(element));
       }
 
       function renderGoals() {
@@ -894,6 +1028,23 @@
 
       function chooseSpecialCreation(groups, preferred) {
         const specials = [];
+        const cellHits = new Map();
+
+        groups.forEach((group) => {
+          group.cells.forEach((cell) => {
+            const key = keyOf(cell.row, cell.col);
+            const hit = cellHits.get(key) || { row: cell.row, col: cell.col, type: group.type, dirs: new Set(), power: 0 };
+            hit.dirs.add(group.direction);
+            hit.power += group.length;
+            cellHits.set(key, hit);
+          });
+        });
+
+        cellHits.forEach((hit) => {
+          if (hit.dirs.size >= 2) {
+            specials.push({ row: hit.row, col: hit.col, type: hit.type, special: SPECIAL_BOMB });
+          }
+        });
 
         groups.forEach((group) => {
           if (group.length < 4) return;
@@ -1054,7 +1205,11 @@
           updateUI();
           announce(`连击 x${combo}，消除 ${matches.size} 个，+${gained}`);
           triggerBoardBurst();
-          spawnEffects(matches, `+${gained}`);
+          spawnEffects(matches, `+${gained}`, combo, expanded.specialCount);
+          showComboBanner(combo, gained, expanded.specialCount);
+          triggerScreenShake(combo, expanded.specialCount);
+          playSound(expanded.specialCount ? "special" : "match", combo + expanded.specialCount);
+          bumpStats(scoreEl, comboEl, specialsEl);
 
           await animateMatches(matches, expanded.specialCount ? "flash" : "pop");
           collectAndRemove(matches, createdSpecials);
@@ -1087,7 +1242,7 @@
         return forced;
       }
 
-      function spawnEffects(matches, text) {
+      function spawnEffects(matches, text, combo = 1, specialCount = 0) {
         const keys = [...matches].slice(0, 18);
         keys.forEach((key, i) => {
           const [row, col] = key.split(",").map(Number);
@@ -1099,10 +1254,11 @@
           const y = rect.top + rect.height / 2;
           const color = TYPES[cell.type].c1;
 
-          for (let n = 0; n < 5; n++) {
+          const particleCount = Math.min(12, 4 + combo + specialCount * 3);
+          for (let n = 0; n < particleCount; n++) {
             const particle = document.createElement("span");
             const angle = Math.random() * Math.PI * 2;
-            const distance = 34 + Math.random() * 36;
+            const distance = 34 + Math.random() * (36 + combo * 8 + specialCount * 12);
             particle.className = "particle";
             particle.style.setProperty("--x", `${x}px`);
             particle.style.setProperty("--y", `${y}px`);
@@ -1113,6 +1269,23 @@
             particle.addEventListener("animationend", () => particle.remove(), { once: true });
           }
 
+          if (combo >= 2 || specialCount > 0) {
+            for (let n = 0; n < 3; n++) {
+              const spark = document.createElement("span");
+              const angle = Math.random() * Math.PI * 2;
+              const distance = 48 + Math.random() * 48;
+              spark.className = "spark";
+              spark.style.setProperty("--x", `${x}px`);
+              spark.style.setProperty("--y", `${y}px`);
+              spark.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+              spark.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+              spark.style.setProperty("--rotate", `${Math.round(angle * 57.3)}deg`);
+              spark.style.setProperty("--color", color);
+              effectsEl.appendChild(spark);
+              spark.addEventListener("animationend", () => spark.remove(), { once: true });
+            }
+          }
+
           if (i === 0) {
             const floatScore = document.createElement("span");
             floatScore.className = "float-score";
@@ -1121,6 +1294,16 @@
             floatScore.style.setProperty("--y", `${y}px`);
             effectsEl.appendChild(floatScore);
             floatScore.addEventListener("animationend", () => floatScore.remove(), { once: true });
+
+            if (specialCount > 0) {
+              const shockwave = document.createElement("span");
+              shockwave.className = "shockwave";
+              shockwave.style.setProperty("--x", `${x}px`);
+              shockwave.style.setProperty("--y", `${y}px`);
+              shockwave.style.setProperty("--color", color);
+              effectsEl.appendChild(shockwave);
+              shockwave.addEventListener("animationend", () => shockwave.remove(), { once: true });
+            }
           }
         });
       }
@@ -1129,6 +1312,24 @@
         boardWrapEl.classList.remove("burst");
         void boardWrapEl.offsetWidth;
         boardWrapEl.classList.add("burst");
+      }
+
+      function triggerScreenShake(combo, specialCount) {
+        if (combo < 2 && specialCount === 0) return;
+        document.body.classList.remove("juicy-shake");
+        void document.body.offsetWidth;
+        document.body.classList.add("juicy-shake");
+      }
+
+      function showComboBanner(combo, gained, specialCount) {
+        if (combo < 2 && specialCount === 0) return;
+        comboTitleEl.textContent = specialCount > 0 ? "SPECIAL!" : `COMBO x${combo}`;
+        comboSubtitleEl.textContent = specialCount > 0
+          ? `特殊触发 ${specialCount} 次，+${gained}`
+          : `连锁爆甜，+${gained}`;
+        comboBannerEl.classList.remove("show");
+        void comboBannerEl.offsetWidth;
+        comboBannerEl.classList.add("show");
       }
 
       function showToast(text) {
@@ -1143,6 +1344,73 @@
         liveEl.textContent = text;
       }
 
+      function toggleSound() {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem("match3Sound", soundEnabled ? "on" : "off");
+        updateSoundButton();
+        if (soundEnabled) {
+          initAudio();
+          playSound("select");
+          showToast("音效已开启");
+        } else {
+          showToast("音效已关闭");
+        }
+      }
+
+      function initAudio() {
+        if (!soundEnabled || audioContext) return;
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return;
+        audioContext = new AudioCtor();
+      }
+
+      function playTone(freq, duration = .08, type = "sine", gain = .045, delay = 0) {
+        if (!soundEnabled) return;
+        initAudio();
+        if (!audioContext) return;
+
+        const start = audioContext.currentTime + delay;
+        const osc = audioContext.createOscillator();
+        const amp = audioContext.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        amp.gain.setValueAtTime(0.0001, start);
+        amp.gain.exponentialRampToValueAtTime(gain, start + .012);
+        amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(amp).connect(audioContext.destination);
+        osc.start(start);
+        osc.stop(start + duration + .02);
+      }
+
+      function playSound(type, intensity = 1) {
+        if (!soundEnabled) return;
+        const volume = Math.min(.095, .035 + intensity * .012);
+
+        if (type === "select") {
+          playTone(520, .055, "triangle", .028);
+        } else if (type === "swap") {
+          playTone(430, .055, "triangle", .026);
+          playTone(610, .065, "triangle", .026, .045);
+        } else if (type === "fail") {
+          playTone(180, .11, "sawtooth", .03);
+          playTone(130, .12, "sawtooth", .022, .08);
+        } else if (type === "match") {
+          playTone(560 + intensity * 26, .075, "triangle", volume);
+          playTone(760 + intensity * 36, .09, "triangle", volume, .055);
+          playTone(980 + intensity * 46, .11, "triangle", volume, .12);
+        } else if (type === "special") {
+          playTone(330, .08, "square", .04);
+          playTone(660, .1, "triangle", .06, .045);
+          playTone(1120, .14, "sine", .08, .11);
+        } else if (type === "win") {
+          [523, 659, 784, 1046].forEach((freq, i) => playTone(freq, .13, "triangle", .055, i * .08));
+        }
+      }
+
+      function vibrate(pattern) {
+        if (navigator.vibrate) navigator.vibrate(pattern);
+      }
+
       function isLevelComplete() {
         const level = getLevel();
         const scoreDone = score >= level.targetScore;
@@ -1155,6 +1423,8 @@
         if (isLevelComplete()) {
           levelEnded = true;
           locked = true;
+          playSound("win");
+          vibrate([40, 40, 80]);
           showModal(true);
           return;
         }
@@ -1187,6 +1457,7 @@
 
       async function handlePick(row, col) {
         if (locked || levelEnded || !inBounds(row, col)) return;
+        initAudio();
 
         const current = { row, col };
 
@@ -1194,6 +1465,8 @@
           selected = current;
           render();
           announce("再点一个相邻果冻进行交换");
+          playSound("select");
+          vibrate(12);
           return;
         }
 
@@ -1201,6 +1474,7 @@
           selected = null;
           render();
           announce("已取消选择");
+          playSound("select");
           return;
         }
 
@@ -1208,6 +1482,7 @@
           selected = current;
           render();
           announce("请选择上下左右相邻的果冻");
+          playSound("select");
           return;
         }
 
@@ -1217,6 +1492,8 @@
         swapCells(first, current);
         movesLeft -= 1;
         updateUI();
+        bumpStats(movesEl);
+        playSound("swap");
         render();
         await sleep(120);
 
@@ -1224,6 +1501,8 @@
         const analysis = findMatches();
         if (analysis.matched.size === 0 && !directSpecial) {
           announce("这步没有形成三连，已经弹回，步数返还");
+          playSound("fail");
+          vibrate([20, 30, 20]);
           [first, current].forEach(({ row: r, col: c }) => {
             const tile = getTile(r, c);
             if (tile) tile.classList.add("shake");
@@ -1233,11 +1512,13 @@
           movesLeft += 1;
           render();
           updateUI();
+          bumpStats(movesEl);
           locked = false;
           return;
         }
 
         if (directSpecial) showToast("彩虹糖触发：同色清屏！");
+        if (directSpecial) playSound("special", 3);
         await resolveBoard({ preferred: current, swappedPair: [first, current] });
         locked = false;
         await checkLevelEnd();
@@ -1284,6 +1565,7 @@
       }
 
       boardEl.addEventListener("pointerdown", handlePointerDown);
+      soundBtn.addEventListener("click", toggleSound);
       resetBtn.addEventListener("click", () => startLevel(levelIndex));
       prevBtn.addEventListener("click", () => startLevel(levelIndex - 1));
       nextBtn.addEventListener("click", () => startLevel(levelIndex + 1));
