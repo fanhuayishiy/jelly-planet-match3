@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>果冻星球消消乐</title>
+  <style>
+    :root {
+      --bg-a: #ff7a7a;
+      --bg-b: #ffd65c;
+      --bg-c: #33d0bd;
+      --ink: #253245;
+      --muted: rgba(37, 50, 69, .66);
+      --glass: rgba(255, 255, 255, .34);
+      --glass-strong: rgba(255, 255, 255, .58);
+      --stroke: rgba(255, 255, 255, .68);
+      --shadow: 0 24px 70px rgba(60, 48, 86, .22);
+      --tile-size: min(10.25vw, 58px);
+      --gap: clamp(5px, 1.15vw, 9px);
+      --board-size: calc(var(--tile-size) * 8 + var(--gap) * 7);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      padding: max(18px, env(safe-area-inset-top)) 14px max(20px, env(safe-area-inset-bottom));
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      background:
+        radial-gradient(circle at 10% 14%, rgba(255, 255, 255, .74) 0 8%, transparent 9%),
+        radial-gradient(circle at 88% 13%, rgba(255, 255, 255, .38) 0 9%, transparent 10%),
+        radial-gradient(circle at 90% 88%, rgba(255, 255, 255, .44) 0 12%, transparent 13%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b) 47%, var(--bg-c));
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      content: "";
+      pointer-events: none;
+    }
+
+    body::before {
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .1) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at center, black, transparent 78%);
+    }
+
+    body::after {
+      z-index: -1;
+      opacity: .42;
+      background:
+        radial-gradient(circle at 22% 78%, #ff3f8f 0 4px, transparent 5px),
+        radial-gradient(circle at 70% 65%, #5df0ff 0 5px, transparent 6px),
+        radial-gradient(circle at 38% 28%, #ffffff 0 3px, transparent 4px);
+      background-size: 190px 170px;
+      animation: candy-drift 16s linear infinite;
+    }
+
+    .game-shell {
+      width: min(100%, 580px);
+      display: grid;
+      gap: 12px;
+      animation: float-in 520ms cubic-bezier(.2, .85, .25, 1) both;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      color: rgba(255, 255, 255, .95);
+      font-size: clamp(30px, 7.2vw, 52px);
+      line-height: .92;
+      letter-spacing: 0;
+      text-shadow: 0 8px 28px rgba(69, 43, 83, .25);
+    }
+
+    .tagline {
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, .87);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn,
+    .primary-btn {
+      border: 1px solid var(--stroke);
+      color: var(--ink);
+      background: rgba(255, 255, 255, .38);
+      box-shadow: 0 12px 24px rgba(76, 61, 93, .14), inset 0 1px rgba(255, 255, 255, .78);
+      backdrop-filter: blur(18px) saturate(150%);
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .primary-btn {
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 15px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .icon-btn:hover,
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, .56);
+    }
+
+    .icon-btn:active,
+    .primary-btn:active {
+      transform: translateY(1px) scale(.97);
+    }
+
+    .panel {
+      border: 1px solid var(--stroke);
+      border-radius: 26px;
+      background: var(--glass);
+      box-shadow: var(--shadow), inset 0 1px rgba(255, 255, 255, .72);
+      backdrop-filter: blur(26px) saturate(150%);
+    }
+
+    .level-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .level-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .level-name {
+      min-width: 0;
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .level-pill {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: rgba(37, 50, 69, .78);
+      background: rgba(255, 255, 255, .42);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .progress {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .38);
+      box-shadow: inset 0 2px 6px rgba(47, 39, 67, .13);
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff4d7d, #ffd452, #38e8c7);
+      box-shadow: 0 0 18px rgba(255, 255, 255, .55);
+      transition: width 280ms ease;
+    }
+
+    .goals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .goal {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .42);
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: inset 0 1px rgba(255, 255, 255, .55);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px;
+      padding: 10px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 10px 11px;
+      border-radius: 17px;
+      background: rgba(255, 255, 255, .38);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .58), 0 8px 20px rgba(70, 59, 92, .1);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .value {
+      margin-top: 4px;
+      font-size: clamp(19px, 5vw, 31px);
+      line-height: 1;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .board-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: clamp(12px, 3.4vw, 20px);
+      overflow: hidden;
+    }
+
+    .board-wrap.burst {
+      animation: board-burst 360ms ease;
+    }
+
+    .board {
+      width: var(--board-size);
+      height: var(--board-size);
+      display: grid;
+      grid-template-columns: repeat(8, var(--tile-size));
+      grid-template-rows: repeat(8, var(--tile-size));
+      gap: var(--gap);
+      position: relative;
+    }
+
+    .tile {
+      width: var(--tile-size);
+      height: var(--tile-size);
+      border: 0;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+      color: white;
+      font-size: calc(var(--tile-size) * .56);
+      line-height: 1;
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255, 255, 255, .9), rgba(255, 255, 255, .24) 25%, transparent 34%),
+        linear-gradient(145deg, var(--c1), var(--c2));
+      box-shadow:
+        inset 0 2px rgba(255, 255, 255, .66),
+        inset 0 -8px 16px rgba(43, 35, 60, .18),
+        0 10px 18px rgba(60, 50, 83, .16);
+      cursor: pointer;
+      transform: translateZ(0);
+      transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease, opacity 180ms ease;
+    }
+
+    .tile::after {
+      width: 58%;
+      height: 22%;
+      position: absolute;
+      top: 13%;
+      left: 17%;
+      content: "";
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .34);
+      transform: rotate(-22deg);
+      pointer-events: none;
+    }
+
+    .tile:hover {
+      transform: translateY(-3px) scale(1.03);
+      filter: saturate(1.14);
+    }
+
+    .tile.selected {
+      transform: translateY(-5px) scale(1.08);
+      box-shadow:
+        0 0 0 4px rgba(255, 255, 255, .82),
+        0 0 0 8px rgba(37, 50, 69, .16),
+        inset 0 2px rgba(255, 255, 255, .72),
+        inset 0 -8px 16px rgba(43, 35, 60, .18),
+        0 18px 24px rgba(60, 50, 83, .22);
+    }
+
+    .tile.special {
+      isolation: isolate;
+    }
+
+    .tile.special::before {
+      position: absolute;
+      inset: 7px;
+      z-index: -1;
+      content: "";
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .24);
+      box-shadow: 0 0 18px rgba(255, 255, 255, .66);
+    }
+
+    .tile.lineH .badge,
+    .tile.lineV .badge,
+    .tile.bomb .badge,
+    .tile.color .badge {
+      position: absolute;
+      right: 4px;
+      bottom: 3px;
+      z-index: 2;
+      width: 19px;
+      height: 19px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(37, 50, 69, .46);
+      font-size: 12px;
+      box-shadow: inset 0 1px rgba(255, 255, 255, .36);
+    }
+
+    .tile.color {
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .16) 26%, transparent 34%),
+        conic-gradient(from 40deg, #ff3f73, #ffbf3f, #61e871, #46d8ff, #9670ff, #ff3f73);
+      animation: color-spin 1.8s linear infinite;
+    }
+
+    .tile.pop {
+      animation: pop 280ms ease forwards;
+    }
+
+    .tile.flash {
+      animation: flash 360ms ease forwards;
+    }
+
+    .tile.shake {
+      animation: shake 260ms ease;
+    }
+
+    .tile.drop {
+      animation: drop-in 260ms cubic-bezier(.16, .9, .22, 1.18) both;
+    }
+
+    .message {
+      min-height: 24px;
+      text-align: center;
+      color: rgba(255, 255, 255, .94);
+      font-size: 13px;
+      font-weight: 900;
+      text-shadow: 0 2px 12px rgba(43, 35, 60, .22);
+    }
+
+    .effects {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .particle {
+      width: 9px;
+      height: 9px;
+      position: fixed;
+      left: var(--x);
+      top: var(--y);
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 12px var(--color);
+      animation: particle 620ms ease-out forwards;
+    }
+
+    .float-score {
+      position: fixed;
+      left: var(--x);
+      top: var(--y);
+      color: white;
+      font-size: 20px;
+      font-weight: 950;
+      text-shadow: 0 3px 14px rgba(37, 50, 69, .45);
+      animation: float-score 760ms ease-out forwards;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      z-index: 30;
+      min-width: min(92vw, 330px);
+      padding: 13px 16px;
+      border: 1px solid rgba(255, 255, 255, .7);
+      border-radius: 18px;
+      text-align: center;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .58);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px) saturate(160%);
+      font-weight: 950;
+      transform: translateX(-50%) translateY(-120%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      animation: toast 1600ms ease both;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 25;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      background: rgba(31, 26, 47, .24);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal.show {
+      display: grid;
+    }
+
+    .dialog {
+      width: min(100%, 400px);
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, .74);
+      border-radius: 26px;
+      text-align: center;
+      background: rgba(255, 255, 255, .62);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(150%);
+      animation: dialog-in 280ms cubic-bezier(.2, .85, .25, 1) both;
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.05;
+      font-weight: 950;
+    }
+
+    .dialog-text {
+      margin: 10px 0 18px;
+      color: rgba(37, 50, 69, .72);
+      font-weight: 800;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .sr-only {
+      width: 1px;
+      height: 1px;
+      position: absolute;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    @keyframes float-in {
+      from { opacity: 0; transform: translateY(18px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes candy-drift {
+      to { background-position: 190px -170px; }
+    }
+
+    @keyframes color-spin {
+      to { filter: hue-rotate(360deg) saturate(1.16); }
+    }
+
+    @keyframes pop {
+      35% { transform: scale(1.22) rotate(4deg); }
+      to { opacity: 0; transform: scale(.18) rotate(-12deg); }
+    }
+
+    @keyframes flash {
+      40% { transform: scale(1.12); filter: brightness(1.45) saturate(1.3); }
+      to { opacity: 0; transform: scale(.25); }
+    }
+
+    @keyframes shake {
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    @keyframes drop-in {
+      from { opacity: 0; transform: translateY(-22px) scale(.86); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes particle {
+      to {
+        opacity: 0;
+        transform: translate(var(--dx), var(--dy)) scale(.1);
+      }
+    }
+
+    @keyframes float-score {
+      to {
+        opacity: 0;
+        transform: translate(-8px, -58px) scale(1.12);
+      }
+    }
+
+    @keyframes board-burst {
+      35% { transform: scale(1.018); filter: brightness(1.08); }
+      to { transform: scale(1); filter: none; }
+    }
+
+    @keyframes toast {
+      0% { opacity: 0; transform: translateX(-50%) translateY(-120%); }
+      16%, 84% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-120%); }
+    }
+
+    @keyframes dialog-in {
+      from { opacity: 0; transform: translateY(14px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 460px) {
+      :root {
+        --tile-size: min(10.55vw, 46px);
+        --gap: 5px;
+      }
+
+      .hero {
+        align-items: center;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .tile {
+        border-radius: 13px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" aria-label="果冻星球消消乐">
+    <section class="hero">
+      <div>
+        <h1>果冻星球<br />消消乐</h1>
+        <p class="tagline">关卡目标、特殊果冻、连锁爆甜一口气安排上</p>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="prevBtn" type="button" aria-label="上一关" title="上一关">‹</button>
+        <button class="icon-btn" id="resetBtn" type="button" aria-label="重新开始" title="重新开始">↻</button>
+        <button class="icon-btn" id="nextBtn" type="button" aria-label="下一关" title="下一关">›</button>
+      </div>
+    </section>
+
+    <section class="level-card panel" aria-label="关卡目标">
+      <div class="level-top">
+        <div class="level-name" id="levelName">第 1 关</div>
+        <div class="level-pill" id="levelPill">目标</div>
+      </div>
+      <div class="progress" aria-label="关卡进度">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="goals" id="goals"></div>
+    </section>
+
+    <section class="stats panel" aria-label="游戏数据">
+      <div class="stat">
+        <div class="label">当前得分</div>
+        <div class="value" id="score">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">剩余步数</div>
+        <div class="value" id="moves">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">最高连击</div>
+        <div class="value" id="combo">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">特殊触发</div>
+        <div class="value" id="specials">0</div>
+      </div>
+    </section>
+
+    <section class="board-wrap panel" id="boardWrap">
+      <div class="board" id="board" role="grid" aria-label="8乘8消消乐棋盘"></div>
+    </section>
+
+    <div class="message" id="message" aria-live="polite">点选两个相邻果冻开始</div>
+    <div class="sr-only" id="live" aria-live="assertive"></div>
+  </main>
+
+  <div class="effects" id="effects" aria-hidden="true"></div>
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="dialog">
+      <h2 class="dialog-title" id="modalTitle">关卡完成</h2>
+      <p class="dialog-text" id="modalText">继续挑战下一关。</p>
+      <div class="dialog-actions">
+        <button class="primary-btn" id="modalPrimary" type="button">下一关</button>
+        <button class="primary-btn" id="modalRetry" type="button">重玩</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const SIZE = 8;
+      const ANIMATION_MS = 290;
+      const SPECIAL_NONE = "";
+      const SPECIAL_LINE_H = "lineH";
+      const SPECIAL_LINE_V = "lineV";
+      const SPECIAL_BOMB = "bomb";
+      const SPECIAL_COLOR = "color";
+
+      const TYPES = [
+        { icon: "🍓", c1: "#ff6b91", c2: "#d92f66", name: "草莓" },
+        { icon: "🍊", c1: "#ffc05c", c2: "#f07d22", name: "橙子" },
+        { icon: "🍋", c1: "#ffe96a", c2: "#d7b80f", name: "柠檬" },
+        { icon: "🍇", c1: "#a879ff", c2: "#7044d8", name: "葡萄" },
+        { icon: "🍒", c1: "#ff5f73", c2: "#b91337", name: "樱桃" },
+        { icon: "🥝", c1: "#9bea71", c2: "#39a949", name: "猕猴桃" }
+      ];
+
+      const LEVELS = [
+        { name: "第 1 关：晨露果园", targetScore: 850, moves: 22, goals: { 0: 8, 1: 8 }, tip: "收集草莓和橙子" },
+        { name: "第 2 关：柠檬汽水", targetScore: 1450, moves: 24, goals: { 2: 12, 5: 8 }, tip: "柠檬越多越好" },
+        { name: "第 3 关：葡萄风暴", targetScore: 2200, moves: 25, goals: { 3: 14, 4: 10 }, tip: "制造 4 连火箭" },
+        { name: "第 4 关：樱桃爆裂", targetScore: 3200, moves: 27, goals: { 4: 16, 0: 12, 1: 12 }, tip: "5 连会生成彩虹糖" },
+        { name: "第 5 关：彩虹终章", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, tip: "连锁触发特殊果冻" }
+      ];
+
+      const boardEl = document.getElementById("board");
+      const boardWrapEl = document.getElementById("boardWrap");
+      const scoreEl = document.getElementById("score");
+      const movesEl = document.getElementById("moves");
+      const comboEl = document.getElementById("combo");
+      const specialsEl = document.getElementById("specials");
+      const messageEl = document.getElementById("message");
+      const liveEl = document.getElementById("live");
+      const goalsEl = document.getElementById("goals");
+      const levelNameEl = document.getElementById("levelName");
+      const levelPillEl = document.getElementById("levelPill");
+      const progressBarEl = document.getElementById("progressBar");
+      const resetBtn = document.getElementById("resetBtn");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const effectsEl = document.getElementById("effects");
+      const toastEl = document.getElementById("toast");
+      const modalEl = document.getElementById("modal");
+      const modalTitleEl = document.getElementById("modalTitle");
+      const modalTextEl = document.getElementById("modalText");
+      const modalPrimaryBtn = document.getElementById("modalPrimary");
+      const modalRetryBtn = document.getElementById("modalRetry");
+
+      let board = [];
+      let selected = null;
+      let score = 0;
+      let movesLeft = 0;
+      let bestCombo = 0;
+      let specialsTriggered = 0;
+      let levelIndex = 0;
+      let collected = {};
+      let locked = false;
+      let levelEnded = false;
+      let activePointerId = null;
+
+      const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+      const indexOf = (row, col) => row * SIZE + col;
+      const keyOf = (row, col) => `${row},${col}`;
+      const randomType = () => Math.floor(Math.random() * TYPES.length);
+      const inBounds = (row, col) => row >= 0 && row < SIZE && col >= 0 && col < SIZE;
+      const isAdjacent = (a, b) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+      const getLevel = () => LEVELS[levelIndex];
+
+      function createCell(type = randomType(), special = SPECIAL_NONE) {
+        return { type, special };
+      }
+
+      function createBoard() {
+        const next = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            let type = randomType();
+            while (
+              (col >= 2 && next[row][col - 1].type === type && next[row][col - 2].type === type) ||
+              (row >= 2 && next[row - 1][col].type === type && next[row - 2][col].type === type)
+            ) {
+              type = randomType();
+            }
+            next[row][col] = createCell(type);
+          }
+        }
+
+        board = next;
+      }
+
+      function render(dropCells = new Set()) {
+        const fragment = document.createDocumentFragment();
+        boardEl.textContent = "";
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            const cell = board[row][col];
+            const tileData = TYPES[cell.type];
+            const tile = document.createElement("button");
+            const badge = document.createElement("span");
+
+            tile.type = "button";
+            tile.className = "tile";
+            tile.dataset.row = String(row);
+            tile.dataset.col = String(col);
+            tile.style.setProperty("--c1", tileData.c1);
+            tile.style.setProperty("--c2", tileData.c2);
+            tile.setAttribute("role", "gridcell");
+            tile.setAttribute("aria-label", `${row + 1}行${col + 1}列，${tileData.name}${specialName(cell.special)}`);
+            tile.textContent = cell.special === SPECIAL_COLOR ? "🌈" : tileData.icon;
+
+            if (cell.special) {
+              tile.classList.add("special", cell.special);
+              badge.className = "badge";
+              badge.textContent = specialBadge(cell.special);
+              tile.appendChild(badge);
+            }
+
+            if (selected && selected.row === row && selected.col === col) {
+              tile.classList.add("selected");
+            }
+
+            if (dropCells.has(keyOf(row, col))) {
+              tile.classList.add("drop");
+            }
+
+            fragment.appendChild(tile);
+          }
+        }
+
+        boardEl.appendChild(fragment);
+      }
+
+      function specialName(special) {
+        if (special === SPECIAL_LINE_H) return "，横向火箭";
+        if (special === SPECIAL_LINE_V) return "，纵向火箭";
+        if (special === SPECIAL_BOMB) return "，爆裂糖";
+        if (special === SPECIAL_COLOR) return "，彩虹糖";
+        return "";
+      }
+
+      function specialBadge(special) {
+        if (special === SPECIAL_LINE_H) return "↔";
+        if (special === SPECIAL_LINE_V) return "↕";
+        if (special === SPECIAL_BOMB) return "✦";
+        if (special === SPECIAL_COLOR) return "★";
+        return "";
+      }
+
+      function updateUI() {
+        const level = getLevel();
+        scoreEl.textContent = String(score);
+        movesEl.textContent = String(movesLeft);
+        comboEl.textContent = String(bestCombo);
+        specialsEl.textContent = String(specialsTriggered);
+        levelNameEl.textContent = level.name;
+        levelPillEl.textContent = `第 ${levelIndex + 1} / ${LEVELS.length} 关`;
+        progressBarEl.style.width = `${Math.min(100, Math.round((score / level.targetScore) * 100))}%`;
+        renderGoals();
+      }
+
+      function renderGoals() {
+        const level = getLevel();
+        const parts = [`<span class="goal">🎯 ${score}/${level.targetScore}</span>`];
+        Object.entries(level.goals).forEach(([type, amount]) => {
+          const done = Math.min(collected[type] || 0, amount);
+          parts.push(`<span class="goal">${TYPES[type].icon} ${done}/${amount}</span>`);
+        });
+        goalsEl.innerHTML = parts.join("");
+      }
+
+      function getTile(row, col) {
+        return boardEl.children[indexOf(row, col)];
+      }
+
+      function swapCells(a, b) {
+        const temp = board[a.row][a.col];
+        board[a.row][a.col] = board[b.row][b.col];
+        board[b.row][b.col] = temp;
+      }
+
+      function findMatches() {
+        const matched = new Set();
+        const groups = [];
+
+        for (let row = 0; row < SIZE; row++) {
+          let streakStart = 0;
+          for (let col = 1; col <= SIZE; col++) {
+            const same = col < SIZE && board[row][col] && board[row][streakStart] && board[row][col].type === board[row][streakStart].type;
+            if (!same) {
+              const length = col - streakStart;
+              if (board[row][streakStart] && length >= 3) {
+                const cells = [];
+                for (let c = streakStart; c < col; c++) {
+                  matched.add(keyOf(row, c));
+                  cells.push({ row, col: c });
+                }
+                groups.push({ direction: "h", length, type: board[row][streakStart].type, cells });
+              }
+              streakStart = col;
+            }
+          }
+        }
+
+        for (let col = 0; col < SIZE; col++) {
+          let streakStart = 0;
+          for (let row = 1; row <= SIZE; row++) {
+            const same = row < SIZE && board[row][col] && board[streakStart][col] && board[row][col].type === board[streakStart][col].type;
+            if (!same) {
+              const length = row - streakStart;
+              if (board[streakStart][col] && length >= 3) {
+                const cells = [];
+                for (let r = streakStart; r < row; r++) {
+                  matched.add(keyOf(r, col));
+                  cells.push({ row: r, col });
+                }
+                groups.push({ direction: "v", length, type: board[streakStart][col].type, cells });
+              }
+              streakStart = row;
+            }
+          }
+        }
+
+        return { matched, groups };
+      }
+
+      function chooseSpecialCreation(groups, preferred) {
+        const specials = [];
+
+        groups.forEach((group) => {
+          if (group.length < 4) return;
+          let target = preferred && group.cells.some((cell) => cell.row === preferred.row && cell.col === preferred.col)
+            ? preferred
+            : group.cells[Math.floor(group.cells.length / 2)];
+
+          if (group.length >= 5) {
+            specials.push({ ...target, type: group.type, special: SPECIAL_COLOR });
+          } else if (group.length === 4) {
+            specials.push({
+              ...target,
+              type: group.type,
+              special: group.direction === "h" ? SPECIAL_LINE_H : SPECIAL_LINE_V
+            });
+          }
+        });
+
+        const byCell = new Map();
+        specials.forEach((item) => {
+          const key = keyOf(item.row, item.col);
+          const existing = byCell.get(key);
+          if (!existing || rankSpecial(item.special) > rankSpecial(existing.special)) byCell.set(key, item);
+        });
+        return byCell;
+      }
+
+      function rankSpecial(special) {
+        if (special === SPECIAL_COLOR) return 4;
+        if (special === SPECIAL_BOMB) return 3;
+        if (special === SPECIAL_LINE_H || special === SPECIAL_LINE_V) return 2;
+        return 1;
+      }
+
+      function expandSpecials(baseMatches, swappedPair) {
+        const result = new Set(baseMatches);
+        const queue = [...baseMatches].map((key) => key.split(",").map(Number));
+
+        if (swappedPair) {
+          swappedPair.forEach(({ row, col }) => {
+            const cell = board[row][col];
+            if (cell && cell.special === SPECIAL_COLOR) {
+              const other = swappedPair.find((p) => p.row !== row || p.col !== col);
+              const targetType = other ? board[other.row][other.col].type : cell.type;
+              for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                  if (board[r][c] && board[r][c].type === targetType) {
+                    result.add(keyOf(r, c));
+                    queue.push([r, c]);
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        const seenSpecial = new Set();
+        while (queue.length) {
+          const [row, col] = queue.shift();
+          const cell = board[row][col];
+          if (!cell || !cell.special || seenSpecial.has(keyOf(row, col))) continue;
+          seenSpecial.add(keyOf(row, col));
+          specialsTriggered += 1;
+
+          if (cell.special === SPECIAL_LINE_H) {
+            for (let c = 0; c < SIZE; c++) addCascade(result, queue, row, c);
+          } else if (cell.special === SPECIAL_LINE_V) {
+            for (let r = 0; r < SIZE; r++) addCascade(result, queue, r, col);
+          } else if (cell.special === SPECIAL_BOMB) {
+            for (let r = row - 1; r <= row + 1; r++) {
+              for (let c = col - 1; c <= col + 1; c++) addCascade(result, queue, r, c);
+            }
+          } else if (cell.special === SPECIAL_COLOR) {
+            const type = cell.type;
+            for (let r = 0; r < SIZE; r++) {
+              for (let c = 0; c < SIZE; c++) {
+                if (board[r][c] && board[r][c].type === type) addCascade(result, queue, r, c);
+              }
+            }
+          }
+        }
+
+        return { cells: result, specialCount: seenSpecial.size };
+      }
+
+      function addCascade(result, queue, row, col) {
+        if (!inBounds(row, col) || !board[row][col]) return;
+        const key = keyOf(row, col);
+        if (!result.has(key)) {
+          result.add(key);
+          queue.push([row, col]);
+        }
+      }
+
+      async function animateMatches(matches, mode = "pop") {
+        matches.forEach((key) => {
+          const [row, col] = key.split(",").map(Number);
+          const tile = getTile(row, col);
+          if (tile) tile.classList.add(mode);
+        });
+        await sleep(ANIMATION_MS);
+      }
+
+      function collectAndRemove(matches, keepSpecials) {
+        matches.forEach((key) => {
+          if (keepSpecials.has(key)) return;
+          const [row, col] = key.split(",").map(Number);
+          const cell = board[row][col];
+          if (!cell) return;
+          collected[cell.type] = (collected[cell.type] || 0) + 1;
+          board[row][col] = null;
+        });
+
+        keepSpecials.forEach((special, key) => {
+          const [row, col] = key.split(",").map(Number);
+          board[row][col] = createCell(special.type, special.special);
+        });
+      }
+
+      function collapseBoard() {
+        const dropped = new Set();
+
+        for (let col = 0; col < SIZE; col++) {
+          const kept = [];
+          for (let row = SIZE - 1; row >= 0; row--) {
+            if (board[row][col]) kept.push(board[row][col]);
+          }
+
+          for (let row = SIZE - 1; row >= 0; row--) {
+            const sourceIndex = SIZE - 1 - row;
+            const nextValue = kept[sourceIndex] || createCell(randomType());
+            if (board[row][col] !== nextValue || row < SIZE - kept.length) dropped.add(keyOf(row, col));
+            board[row][col] = nextValue;
+          }
+        }
+
+        return dropped;
+      }
+
+      async function resolveBoard(options = {}) {
+        let combo = 0;
+        let analysis = findMatches();
+        let preferred = options.preferred || null;
+        let forcedSpecial = getForcedSpecialMatches(options.swappedPair);
+
+        while (analysis.matched.size > 0 || forcedSpecial.size > 0) {
+          combo += 1;
+          const createdSpecials = chooseSpecialCreation(analysis.groups, preferred);
+          const baseMatches = new Set([...analysis.matched, ...forcedSpecial]);
+          const expanded = expandSpecials(baseMatches, options.swappedPair);
+          const matches = expanded.cells;
+
+          createdSpecials.forEach((_, key) => matches.delete(key));
+          bestCombo = Math.max(bestCombo, combo);
+
+          const gained = matches.size * 10 * combo + expanded.specialCount * 80;
+          score += gained;
+          updateUI();
+          announce(`连击 x${combo}，消除 ${matches.size} 个，+${gained}`);
+          triggerBoardBurst();
+          spawnEffects(matches, `+${gained}`);
+
+          await animateMatches(matches, expanded.specialCount ? "flash" : "pop");
+          collectAndRemove(matches, createdSpecials);
+          const dropped = collapseBoard();
+          render(dropped);
+          updateUI();
+          await sleep(ANIMATION_MS);
+          preferred = null;
+          options.swappedPair = null;
+          forcedSpecial = new Set();
+          analysis = findMatches();
+        }
+
+        if (combo > 0) {
+          announce(`棋盘稳定，最高连击 x${bestCombo}`);
+        }
+      }
+
+      function getForcedSpecialMatches(swappedPair) {
+        const forced = new Set();
+        if (!swappedPair) return forced;
+
+        swappedPair.forEach(({ row, col }) => {
+          const cell = board[row][col];
+          if (cell && cell.special === SPECIAL_COLOR) {
+            forced.add(keyOf(row, col));
+          }
+        });
+
+        return forced;
+      }
+
+      function spawnEffects(matches, text) {
+        const keys = [...matches].slice(0, 18);
+        keys.forEach((key, i) => {
+          const [row, col] = key.split(",").map(Number);
+          const tile = getTile(row, col);
+          const cell = board[row][col];
+          if (!tile || !cell) return;
+          const rect = tile.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const color = TYPES[cell.type].c1;
+
+          for (let n = 0; n < 5; n++) {
+            const particle = document.createElement("span");
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 34 + Math.random() * 36;
+            particle.className = "particle";
+            particle.style.setProperty("--x", `${x}px`);
+            particle.style.setProperty("--y", `${y}px`);
+            particle.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+            particle.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+            particle.style.setProperty("--color", color);
+            effectsEl.appendChild(particle);
+            particle.addEventListener("animationend", () => particle.remove(), { once: true });
+          }
+
+          if (i === 0) {
+            const floatScore = document.createElement("span");
+            floatScore.className = "float-score";
+            floatScore.textContent = text;
+            floatScore.style.setProperty("--x", `${x}px`);
+            floatScore.style.setProperty("--y", `${y}px`);
+            effectsEl.appendChild(floatScore);
+            floatScore.addEventListener("animationend", () => floatScore.remove(), { once: true });
+          }
+        });
+      }
+
+      function triggerBoardBurst() {
+        boardWrapEl.classList.remove("burst");
+        void boardWrapEl.offsetWidth;
+        boardWrapEl.classList.add("burst");
+      }
+
+      function showToast(text) {
+        toastEl.textContent = text;
+        toastEl.classList.remove("show");
+        void toastEl.offsetWidth;
+        toastEl.classList.add("show");
+      }
+
+      function announce(text) {
+        messageEl.textContent = text;
+        liveEl.textContent = text;
+      }
+
+      function isLevelComplete() {
+        const level = getLevel();
+        const scoreDone = score >= level.targetScore;
+        const goalsDone = Object.entries(level.goals).every(([type, amount]) => (collected[type] || 0) >= amount);
+        return scoreDone && goalsDone;
+      }
+
+      async function checkLevelEnd() {
+        if (levelEnded) return;
+        if (isLevelComplete()) {
+          levelEnded = true;
+          locked = true;
+          showModal(true);
+          return;
+        }
+
+        if (movesLeft <= 0) {
+          levelEnded = true;
+          locked = true;
+          showModal(false);
+        }
+      }
+
+      function showModal(won) {
+        if (won) {
+          modalTitleEl.textContent = "关卡完成！";
+          modalTextEl.textContent = levelIndex < LEVELS.length - 1
+            ? `得分 ${score}，最高连击 x${bestCombo}。下一关会更甜也更狠。`
+            : `全部关卡完成，最终得分 ${score}。`;
+          modalPrimaryBtn.textContent = levelIndex < LEVELS.length - 1 ? "下一关" : "再玩一遍";
+        } else {
+          modalTitleEl.textContent = "步数用完";
+          modalTextEl.textContent = `还差一点点，当前得分 ${score}。重来会保留这个关卡。`;
+          modalPrimaryBtn.textContent = "继续挑战";
+        }
+        modalEl.classList.add("show");
+      }
+
+      function hideModal() {
+        modalEl.classList.remove("show");
+      }
+
+      async function handlePick(row, col) {
+        if (locked || levelEnded || !inBounds(row, col)) return;
+
+        const current = { row, col };
+
+        if (!selected) {
+          selected = current;
+          render();
+          announce("再点一个相邻果冻进行交换");
+          return;
+        }
+
+        if (selected.row === row && selected.col === col) {
+          selected = null;
+          render();
+          announce("已取消选择");
+          return;
+        }
+
+        if (!isAdjacent(selected, current)) {
+          selected = current;
+          render();
+          announce("请选择上下左右相邻的果冻");
+          return;
+        }
+
+        locked = true;
+        const first = selected;
+        selected = null;
+        swapCells(first, current);
+        movesLeft -= 1;
+        updateUI();
+        render();
+        await sleep(120);
+
+        const directSpecial = [first, current].some(({ row: r, col: c }) => board[r][c].special === SPECIAL_COLOR);
+        const analysis = findMatches();
+        if (analysis.matched.size === 0 && !directSpecial) {
+          announce("这步没有形成三连，已经弹回，步数返还");
+          [first, current].forEach(({ row: r, col: c }) => {
+            const tile = getTile(r, c);
+            if (tile) tile.classList.add("shake");
+          });
+          await sleep(ANIMATION_MS);
+          swapCells(first, current);
+          movesLeft += 1;
+          render();
+          updateUI();
+          locked = false;
+          return;
+        }
+
+        if (directSpecial) showToast("彩虹糖触发：同色清屏！");
+        await resolveBoard({ preferred: current, swappedPair: [first, current] });
+        locked = false;
+        await checkLevelEnd();
+      }
+
+      function handlePointerDown(event) {
+        const tile = event.target.closest(".tile");
+        if (!tile || locked || activePointerId !== null) return;
+
+        activePointerId = event.pointerId;
+        tile.setPointerCapture?.(event.pointerId);
+        const row = Number(tile.dataset.row);
+        const col = Number(tile.dataset.col);
+        handlePick(row, col).finally(() => {
+          activePointerId = null;
+        });
+      }
+
+      async function startLevel(index = levelIndex) {
+        levelIndex = (index + LEVELS.length) % LEVELS.length;
+        const level = getLevel();
+        locked = true;
+        levelEnded = false;
+        selected = null;
+        score = 0;
+        bestCombo = 0;
+        specialsTriggered = 0;
+        movesLeft = level.moves;
+        collected = {};
+        hideModal();
+        createBoard();
+        render();
+        updateUI();
+        announce(`正在准备 ${level.name}：${level.tip}`);
+        await sleep(160);
+        await resolveBoard();
+        announce(`${level.tip}，点选两个相邻果冻开始`);
+        locked = false;
+      }
+
+      function nextLevel() {
+        if (levelIndex < LEVELS.length - 1) startLevel(levelIndex + 1);
+        else startLevel(0);
+      }
+
+      boardEl.addEventListener("pointerdown", handlePointerDown);
+      resetBtn.addEventListener("click", () => startLevel(levelIndex));
+      prevBtn.addEventListener("click", () => startLevel(levelIndex - 1));
+      nextBtn.addEventListener("click", () => startLevel(levelIndex + 1));
+      modalPrimaryBtn.addEventListener("click", nextLevel);
+      modalRetryBtn.addEventListener("click", () => startLevel(levelIndex));
+
+      startLevel(0);
+    })();
+  </script>
+</body>
+</html>

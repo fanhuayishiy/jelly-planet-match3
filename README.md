@@ -1,0 +1,56 @@
+# 果冻星球消消乐
+
+一个单文件 H5 三消游戏，使用原生 HTML、CSS 和 JavaScript 实现。项目包含关卡目标、步数限制、连锁消除、特殊果冻、粒子特效和响应式界面，可直接双击运行，也可以部署到 GitHub Pages。
+
+## 在线运行
+
+本地打开：
+
+```bash
+start match3.html
+```
+
+或使用任意静态服务器：
+
+```bash
+npx serve .
+```
+
+然后访问 `match3.html`。
+
+## 玩法特性
+
+- 8 x 8 三消棋盘
+- 点击两个相邻水果交换
+- 无效交换会自动回弹
+- 消除后自动掉落和补齐
+- 连锁消除直到棋盘稳定
+- 5 个关卡，包含目标分、收集目标和步数限制
+- 4 连生成横向或纵向火箭
+- 5 连生成彩虹糖
+- 粒子爆炸、浮动加分、棋盘脉冲和弹窗反馈
+- 兼容桌面鼠标与移动端触控
+
+## 文件结构
+
+```text
+.
+├── match3.html   # 游戏本体，包含所有样式和脚本
+├── index.html    # GitHub Pages 入口，自动跳转到游戏
+├── LICENSE       # MIT 开源许可证
+└── README.md     # 项目说明
+```
+
+## 部署到 GitHub Pages
+
+推送到 GitHub 后，在仓库设置中打开 Pages：
+
+1. 进入仓库的 `Settings`
+2. 打开 `Pages`
+3. Source 选择 `Deploy from a branch`
+4. Branch 选择 `main`，目录选择 `/root`
+5. 保存后访问 GitHub Pages 给出的地址
+
+## 许可协议
+
+本项目基于 MIT License 开源。
