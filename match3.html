@@ -533,16 +533,6 @@
       filter: saturate(1.14);
     }
 
-    .tile.selected {
-      transform: translateY(-5px) scale(1.08);
-      box-shadow:
-        0 0 0 4px rgba(255, 255, 255, .82),
-        0 0 0 8px rgba(37, 50, 69, .16),
-        inset 0 2px rgba(255, 255, 255, .72),
-        inset 0 -8px 16px rgba(43, 35, 60, .18),
-        0 18px 24px rgba(60, 50, 83, .22);
-    }
-
     .tile.hint {
       animation: hint-pulse 760ms ease-in-out infinite alternate;
     }
@@ -983,7 +973,7 @@
       <div class="start-brand">
         <div class="start-kicker">H5 MATCH-3 GAME</div>
         <h1 class="start-title">果冻星球<br />消消乐</h1>
-        <p class="start-copy">交换、连锁、特殊果冻和关卡道具都准备好了。点开始进入第一关，点继续会保留当前预加载棋盘。</p>
+        <p class="start-copy">拖动水果交换、连锁、特殊果冻和关卡道具都准备好了。点开始进入第一关，点继续会保留当前预加载棋盘。</p>
       </div>
 
       <div class="start-mini-board" aria-hidden="true">
@@ -1070,7 +1060,7 @@
       <div class="board" id="board" role="grid" aria-label="8乘8消消乐棋盘"></div>
     </section>
 
-    <div class="message" id="message" aria-live="polite">点选两个相邻果冻开始</div>
+    <div class="message" id="message" aria-live="polite">拖动水果到相邻格子开始</div>
     <div class="sr-only" id="live" aria-live="assertive"></div>
   </main>
 
@@ -1158,7 +1148,6 @@
       const modalRetryBtn = document.getElementById("modalRetry");
 
       let board = [];
-      let selected = null;
       let score = 0;
       let movesLeft = 0;
       let bestCombo = 0;
@@ -1168,6 +1157,7 @@
       let locked = false;
       let levelEnded = false;
       let activePointerId = null;
+      let dragState = null;
       let audioContext = null;
       let soundEnabled = localStorage.getItem("match3Sound") !== "off";
       let boosterMode = "";
@@ -1232,10 +1222,6 @@
               badge.className = "badge";
               badge.textContent = specialBadge(cell.special);
               tile.appendChild(badge);
-            }
-
-            if (selected && selected.row === row && selected.col === col) {
-              tile.classList.add("selected");
             }
 
             if (dropCells.has(keyOf(row, col))) {
@@ -1803,7 +1789,6 @@
         }
 
         move.forEach((cell) => hintCells.add(keyOf(cell.row, cell.col)));
-        selected = null;
         boosterMode = "";
         render();
         showToast("高亮的两个水果可以交换");
@@ -1814,7 +1799,6 @@
         if (locked || levelEnded || boosterCounts.hammer <= 0) return;
         boosterMode = boosterMode === "hammer" ? "" : "hammer";
         hintCells.clear();
-        selected = null;
         render();
         updateBoosterButtons();
         announce(boosterMode === "hammer" ? "锤子已就绪，点一个水果清掉周围一圈" : "已取消锤子");
@@ -1827,7 +1811,6 @@
         boosterCounts.shuffle -= 1;
         boosterMode = "";
         hintCells.clear();
-        selected = null;
         updateUI();
         announce("手动洗牌，重新找机会！");
         showToast("洗牌！");
@@ -1845,7 +1828,7 @@
       async function useRainbowBooster() {
         if (locked || levelEnded || boosterCounts.rainbow <= 0) return;
         const move = findValidMove();
-        const target = selected || (move ? move[0] : { row: Math.floor(SIZE / 2), col: Math.floor(SIZE / 2) });
+        const target = move ? move[0] : { row: Math.floor(SIZE / 2), col: Math.floor(SIZE / 2) };
         const cell = board[target.row][target.col];
         if (!cell) return;
 
@@ -1853,7 +1836,6 @@
         boosterCounts.rainbow -= 1;
         boosterMode = "";
         hintCells.clear();
-        selected = null;
         board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR);
         render();
         updateUI();
@@ -1872,7 +1854,6 @@
         boosterCounts.hammer -= 1;
         boosterMode = "";
         hintCells.clear();
-        selected = null;
 
         const base = new Set();
         for (let r = row - 1; r <= row + 1; r++) {
@@ -2031,46 +2012,19 @@
         await startLevel(0);
       }
 
-      async function handlePick(row, col) {
-        if (locked || levelEnded || !inBounds(row, col)) return;
+      async function attemptSwap(first, current) {
+        if (locked || levelEnded || !inBounds(first.row, first.col) || !inBounds(current.row, current.col)) return;
         initAudio();
 
-        if (boosterMode === "hammer") {
-          await useHammer(row, col);
-          return;
-        }
-
-        const current = { row, col };
         hintCells.clear();
 
-        if (!selected) {
-          selected = current;
-          render();
-          announce("再点一个相邻果冻进行交换");
-          playSound("select");
-          vibrate(12);
-          return;
-        }
-
-        if (selected.row === row && selected.col === col) {
-          selected = null;
-          render();
-          announce("已取消选择");
-          playSound("select");
-          return;
-        }
-
-        if (!isAdjacent(selected, current)) {
-          selected = current;
-          render();
-          announce("请选择上下左右相邻的果冻");
-          playSound("select");
+        if (!isAdjacent(first, current)) {
+          announce("请拖到上下左右相邻的水果");
+          playSound("fail");
           return;
         }
 
         locked = true;
-        const first = selected;
-        selected = null;
         swapCells(first, current);
         movesLeft -= 1;
         updateUI();
@@ -2116,9 +2070,73 @@
         tile.setPointerCapture?.(event.pointerId);
         const row = Number(tile.dataset.row);
         const col = Number(tile.dataset.col);
-        handlePick(row, col).finally(() => {
+
+        if (boosterMode === "hammer") {
+          useHammer(row, col).finally(() => {
+            activePointerId = null;
+          });
+          return;
+        }
+
+        initAudio();
+        hintCells.clear();
+        dragState = {
+          row,
+          col,
+          startX: event.clientX,
+          startY: event.clientY,
+          currentRow: row,
+          currentCol: col,
+          hasMoved: false
+        };
+        playSound("select");
+        vibrate(8);
+      }
+
+      function handlePointerMove(event) {
+        if (!dragState || event.pointerId !== activePointerId || locked || levelEnded) return;
+        const deltaX = event.clientX - dragState.startX;
+        const deltaY = event.clientY - dragState.startY;
+        const distance = Math.hypot(deltaX, deltaY);
+        const tile = getTile(dragState.row, dragState.col);
+        const tileSize = tile ? tile.getBoundingClientRect().width : 48;
+        const threshold = Math.max(18, tileSize * .32);
+        if (distance < threshold) return;
+
+        const horizontal = Math.abs(deltaX) > Math.abs(deltaY);
+        const target = {
+          row: dragState.row + (horizontal ? 0 : Math.sign(deltaY)),
+          col: dragState.col + (horizontal ? Math.sign(deltaX) : 0)
+        };
+
+        if (!inBounds(target.row, target.col)) return;
+        dragState.currentRow = target.row;
+        dragState.currentCol = target.col;
+        dragState.hasMoved = true;
+      }
+
+      function handlePointerUp(event) {
+        if (!dragState || event.pointerId !== activePointerId) return;
+        const first = { row: dragState.row, col: dragState.col };
+        const current = { row: dragState.currentRow, col: dragState.currentCol };
+        const shouldSwap = dragState.hasMoved && isAdjacent(first, current);
+        dragState = null;
+
+        if (!shouldSwap) {
+          announce("按住水果拖到相邻格子交换");
+          activePointerId = null;
+          return;
+        }
+
+        attemptSwap(first, current).finally(() => {
           activePointerId = null;
         });
+      }
+
+      function handlePointerCancel(event) {
+        if (event.pointerId !== activePointerId) return;
+        dragState = null;
+        activePointerId = null;
       }
 
       async function startLevel(index = levelIndex) {
@@ -2126,7 +2144,6 @@
         const level = getLevel();
         locked = true;
         levelEnded = false;
-        selected = null;
         score = 0;
         bestCombo = 0;
         specialsTriggered = 0;
@@ -2142,7 +2159,7 @@
         announce(`正在准备 ${level.name}：${level.tip}`);
         await sleep(160);
         await resolveBoard();
-        announce(`${level.tip}，点选两个相邻果冻开始`);
+        announce(`${level.tip}，拖动相邻果冻开始`);
         locked = false;
         updateUI();
       }
@@ -2153,6 +2170,9 @@
       }
 
       boardEl.addEventListener("pointerdown", handlePointerDown);
+      boardEl.addEventListener("pointermove", handlePointerMove);
+      boardEl.addEventListener("pointerup", handlePointerUp);
+      boardEl.addEventListener("pointercancel", handlePointerCancel);
       startGameBtn.addEventListener("click", startFromIntro);
       continueGameBtn.addEventListener("click", () => {
         closeStartScreen();
