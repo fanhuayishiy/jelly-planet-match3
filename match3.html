@@ -268,7 +268,7 @@
     .goals {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 7px;
     }
 
     .goal {
@@ -276,12 +276,24 @@
       align-items: center;
       gap: 6px;
       min-height: 30px;
-      padding: 5px 9px;
+      padding: 5px 10px;
       border-radius: 999px;
       background: rgba(255, 255, 255, .42);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 900;
       box-shadow: inset 0 1px rgba(255, 255, 255, .55);
+    }
+
+    .goal.score-goal {
+      color: white;
+      background: linear-gradient(135deg, rgba(255, 77, 125, .78), rgba(255, 182, 63, .72));
+      text-shadow: 0 1px 8px rgba(71, 43, 86, .22);
+    }
+
+    .goal.ice-goal {
+      color: #164159;
+      background: linear-gradient(135deg, rgba(214, 248, 255, .8), rgba(89, 219, 255, .48));
+      box-shadow: inset 0 1px rgba(255, 255, 255, .84), 0 0 18px rgba(92, 227, 255, .22);
     }
 
     .stats {
@@ -569,6 +581,33 @@
       isolation: isolate;
     }
 
+    .tile.iced {
+      box-shadow:
+        inset 0 2px rgba(255, 255, 255, .78),
+        inset 0 -8px 16px rgba(43, 35, 60, .16),
+        0 0 0 2px rgba(206, 247, 255, .76),
+        0 12px 22px rgba(61, 181, 220, .18);
+    }
+
+    .ice-layer {
+      position: absolute;
+      inset: 3px;
+      z-index: 3;
+      display: grid;
+      place-items: end start;
+      padding: 5px;
+      border-radius: 16px;
+      color: rgba(255, 255, 255, .94);
+      font-size: calc(var(--tile-size) * .25);
+      text-shadow: 0 1px 8px rgba(0, 107, 154, .38);
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, .68), rgba(133, 234, 255, .24) 45%, rgba(255, 255, 255, .09)),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, .46) 0 2px, transparent 2px 10px);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .86), inset 0 -10px 18px rgba(56, 181, 222, .16);
+      mix-blend-mode: screen;
+    }
+
     .tile.special::before {
       position: absolute;
       inset: 7px;
@@ -586,7 +625,7 @@
       position: absolute;
       right: 4px;
       bottom: 3px;
-      z-index: 2;
+      z-index: 4;
       width: 19px;
       height: 19px;
       display: grid;
@@ -1130,7 +1169,22 @@
         { name: "第 2 关：柠檬汽水", targetScore: 1450, moves: 24, goals: { 2: 12, 5: 8 }, boosters: { hammer: 1, shuffle: 1, rainbow: 1 }, tip: "柠檬越多越好" },
         { name: "第 3 关：葡萄风暴", targetScore: 2200, moves: 25, goals: { 3: 14, 4: 10 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "制造 4 连火箭" },
         { name: "第 4 关：樱桃爆裂", targetScore: 3200, moves: 27, goals: { 4: 16, 0: 12, 1: 12 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "5 连会生成彩虹糖" },
-        { name: "第 5 关：彩虹终章", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "连锁触发特殊果冻" }
+        { name: "第 5 关：彩虹练习场", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "连锁触发特殊果冻" },
+        { name: "第 6 关：薄冰溪谷", targetScore: 5600, moves: 31, goals: { 1: 16, 3: 12 }, iceGoal: 8, iceCount: 10, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "打碎冰晶水果" },
+        { name: "第 7 关：猕猴桃冻原", targetScore: 6500, moves: 31, goals: { 5: 18, 2: 14 }, iceGoal: 10, iceCount: 12, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "冰晶会随水果一起被消除" },
+        { name: "第 8 关：莓果回旋", targetScore: 7350, moves: 32, goals: { 0: 18, 4: 14, 1: 12 }, iceGoal: 12, iceCount: 14, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "优先制造火箭清冰" },
+        { name: "第 9 关：橙光隧道", targetScore: 8200, moves: 32, goals: { 1: 22, 2: 16 }, iceGoal: 14, iceCount: 16, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "横竖火箭可以快速扫开冰晶" },
+        { name: "第 10 关：星糖实验室", targetScore: 9100, moves: 33, goals: { 3: 18, 5: 18, 0: 12 }, iceGoal: 15, iceCount: 18, boosters: { hammer: 2, shuffle: 2, rainbow: 2 }, tip: "彩虹糖配合目标水果最稳定" },
+        { name: "第 11 关：樱桃焰火", targetScore: 10100, moves: 33, goals: { 4: 24, 1: 16 }, iceGoal: 17, iceCount: 20, boosters: { hammer: 3, shuffle: 2, rainbow: 1 }, tip: "爆裂糖能一次打碎大片冰晶" },
+        { name: "第 12 关：柠檬电台", targetScore: 11200, moves: 34, goals: { 2: 26, 3: 18, 5: 12 }, iceGoal: 18, iceCount: 21, boosters: { hammer: 3, shuffle: 2, rainbow: 1 }, tip: "保留步数给后半段连锁" },
+        { name: "第 13 关：霜糖海岸", targetScore: 12300, moves: 34, goals: { 0: 20, 1: 20, 4: 16 }, iceGoal: 20, iceCount: 23, boosters: { hammer: 3, shuffle: 2, rainbow: 2 }, tip: "先清冰，再冲目标分" },
+        { name: "第 14 关：葡萄磁暴", targetScore: 13400, moves: 35, goals: { 3: 28, 2: 18 }, iceGoal: 22, iceCount: 25, boosters: { hammer: 3, shuffle: 2, rainbow: 2 }, tip: "特殊果冻移动即可触发" },
+        { name: "第 15 关：翡翠冷库", targetScore: 14500, moves: 35, goals: { 5: 28, 0: 18, 4: 14 }, iceGoal: 24, iceCount: 27, boosters: { hammer: 3, shuffle: 2, rainbow: 2 }, tip: "锤子适合收尾补目标" },
+        { name: "第 16 关：蜜橙塔楼", targetScore: 15800, moves: 36, goals: { 1: 30, 2: 22, 3: 14 }, iceGoal: 25, iceCount: 29, boosters: { hammer: 3, shuffle: 3, rainbow: 2 }, tip: "连锁越深，目标分越轻松" },
+        { name: "第 17 关：红莓极光", targetScore: 17100, moves: 36, goals: { 0: 30, 4: 22 }, iceGoal: 27, iceCount: 31, boosters: { hammer: 3, shuffle: 3, rainbow: 2 }, tip: "彩虹糖清目标色最划算" },
+        { name: "第 18 关：双星冰泉", targetScore: 18400, moves: 37, goals: { 2: 26, 5: 24, 1: 18 }, iceGoal: 28, iceCount: 32, boosters: { hammer: 3, shuffle: 3, rainbow: 2 }, tip: "遇到双彩虹糖就大胆引爆" },
+        { name: "第 19 关：果冻星门", targetScore: 19800, moves: 38, goals: { 3: 28, 4: 24, 0: 18 }, iceGoal: 30, iceCount: 34, boosters: { hammer: 4, shuffle: 3, rainbow: 2 }, tip: "冰晶、分数和收集目标都要兼顾" },
+        { name: "第 20 关：彩虹终章", targetScore: 21500, moves: 40, goals: { 0: 24, 1: 24, 2: 24, 3: 24, 5: 18 }, iceGoal: 32, iceCount: 36, boosters: { hammer: 4, shuffle: 3, rainbow: 3 }, tip: "终章给足道具，打出大连锁！" }
       ];
 
       const boardEl = document.getElementById("board");
@@ -1177,6 +1231,7 @@
       let specialsTriggered = 0;
       let levelIndex = 0;
       let collected = {};
+      let collectedIce = 0;
       let locked = false;
       let levelEnded = false;
       let activePointerId = null;
@@ -1195,8 +1250,8 @@
       const isAdjacent = (a, b) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
       const getLevel = () => LEVELS[levelIndex];
 
-      function createCell(type = randomType(), special = SPECIAL_NONE) {
-        return { type, special };
+      function createCell(type = randomType(), special = SPECIAL_NONE, ice = 0) {
+        return { type, special, ice };
       }
 
       function createBoard() {
@@ -1216,6 +1271,31 @@
         }
 
         board = next;
+        applyIceToBoard();
+      }
+
+      function applyIceToBoard() {
+        const level = getLevel();
+        const iceCount = Math.min(SIZE * SIZE, level.iceCount || 0);
+        if (!iceCount) return;
+
+        const cells = [];
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            cells.push({
+              row,
+              col,
+              weight: Math.abs(row - 3.5) + Math.abs(col - 3.5) + Math.random() * 2
+            });
+          }
+        }
+
+        cells
+          .sort((a, b) => a.weight - b.weight)
+          .slice(0, iceCount)
+          .forEach(({ row, col }) => {
+            board[row][col].ice = 1;
+          });
       }
 
       function render(dropCells = new Set()) {
@@ -1239,6 +1319,14 @@
             tile.setAttribute("role", "gridcell");
             tile.setAttribute("aria-label", `${row + 1}行${col + 1}列，${tileData.name}${specialName(cell.special)}`);
             tile.textContent = cell.special === SPECIAL_COLOR ? "🌈" : tileData.icon;
+
+            if (cell.ice) {
+              const iceLayer = document.createElement("span");
+              tile.classList.add("iced");
+              iceLayer.className = "ice-layer";
+              iceLayer.textContent = "❄";
+              tile.appendChild(iceLayer);
+            }
 
             if (cell.special) {
               tile.classList.add("special", cell.special);
@@ -1325,11 +1413,15 @@
 
       function renderGoals() {
         const level = getLevel();
-        const parts = [`<span class="goal">🎯 ${score}/${level.targetScore}</span>`];
+        const parts = [`<span class="goal score-goal">🎯 ${score}/${level.targetScore}</span>`];
         Object.entries(level.goals).forEach(([type, amount]) => {
           const done = Math.min(collected[type] || 0, amount);
           parts.push(`<span class="goal">${TYPES[type].icon} ${done}/${amount}</span>`);
         });
+        if (level.iceGoal) {
+          const done = Math.min(collectedIce, level.iceGoal);
+          parts.push(`<span class="goal ice-goal">🧊 ${done}/${level.iceGoal}</span>`);
+        }
         goalsEl.innerHTML = parts.join("");
       }
 
@@ -1584,17 +1676,19 @@
 
       function collectAndRemove(matches, keepSpecials) {
         matches.forEach((key) => {
-          if (keepSpecials.has(key)) return;
           const [row, col] = key.split(",").map(Number);
           const cell = board[row][col];
           if (!cell) return;
+          if (cell.ice) collectedIce += 1;
+          if (keepSpecials.has(key)) return;
           collected[cell.type] = (collected[cell.type] || 0) + 1;
           board[row][col] = null;
         });
 
         keepSpecials.forEach((special, key) => {
           const [row, col] = key.split(",").map(Number);
-          board[row][col] = createCell(special.type, special.special);
+          if (board[row][col]?.ice) collectedIce += 1;
+          board[row][col] = createCell(special.type, special.special, 0);
         });
       }
 
@@ -1885,7 +1979,7 @@
         boosterCounts.rainbow -= 1;
         boosterMode = "";
         hintCells.clear();
-        board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR);
+        board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR, cell.ice || 0);
         render();
         updateUI();
         showToast("彩虹糖已放入棋盘");
@@ -2010,7 +2104,8 @@
         const level = getLevel();
         const scoreDone = score >= level.targetScore;
         const goalsDone = Object.entries(level.goals).every(([type, amount]) => (collected[type] || 0) >= amount);
-        return scoreDone && goalsDone;
+        const iceDone = !level.iceGoal || collectedIce >= level.iceGoal;
+        return scoreDone && goalsDone && iceDone;
       }
 
       async function checkLevelEnd() {
@@ -2116,7 +2211,11 @@
         if (!tile || locked || activePointerId !== null) return;
 
         activePointerId = event.pointerId;
-        tile.setPointerCapture?.(event.pointerId);
+        try {
+          tile.setPointerCapture?.(event.pointerId);
+        } catch {
+          // 某些合成事件或旧浏览器不会建立真实 pointer capture，拖放逻辑仍可继续。
+        }
         const row = Number(tile.dataset.row);
         const col = Number(tile.dataset.col);
 
@@ -2209,6 +2308,7 @@
         specialsTriggered = 0;
         movesLeft = level.moves;
         collected = {};
+        collectedIce = 0;
         boosterCounts = { ...level.boosters };
         boosterMode = "";
         hintCells.clear();
