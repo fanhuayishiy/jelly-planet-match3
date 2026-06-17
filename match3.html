@@ -352,6 +352,7 @@
       display: grid;
       place-items: center;
       padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+      overflow-y: auto;
       background:
         radial-gradient(circle at 18% 18%, rgba(255, 255, 255, .64), transparent 22%),
         radial-gradient(circle at 84% 22%, rgba(255, 255, 255, .35), transparent 18%),
@@ -493,6 +494,63 @@
       line-height: 1;
     }
 
+    .level-map {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, .28);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .52);
+    }
+
+    .level-map-title {
+      color: rgba(37, 50, 69, .72);
+      font-size: 12px;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+    }
+
+    .level-jump {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding: 2px 0 4px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .level-chip {
+      min-width: 42px;
+      min-height: 34px;
+      border: 1px solid rgba(255, 255, 255, .58);
+      border-radius: 13px;
+      color: rgba(37, 50, 69, .82);
+      background: rgba(255, 255, 255, .42);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .62), 0 7px 14px rgba(70, 59, 92, .08);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 950;
+      touch-action: manipulation;
+      transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+    }
+
+    .level-chip:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, .62);
+    }
+
+    .level-chip.active {
+      color: white;
+      background: linear-gradient(135deg, #ff4d7d, #ffb63f 52%, #38e8c7);
+      box-shadow: 0 10px 20px rgba(255, 77, 125, .18), inset 0 1px rgba(255, 255, 255, .72);
+    }
+
     .board {
       width: var(--board-size);
       height: var(--board-size);
@@ -501,6 +559,9 @@
       grid-template-rows: repeat(8, var(--tile-size));
       gap: var(--gap);
       position: relative;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .tile {
@@ -523,6 +584,10 @@
         inset 0 -8px 16px rgba(43, 35, 60, .18),
         0 10px 18px rgba(60, 50, 83, .16);
       cursor: pointer;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       transform: translateZ(0);
       transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease, opacity 180ms ease;
     }
@@ -1013,6 +1078,10 @@
         grid-template-columns: 1fr;
       }
 
+      .level-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
       .tile {
         border-radius: 13px;
       }
@@ -1056,6 +1125,11 @@
         <div class="start-tip"><strong>5</strong><span>连出彩虹</span></div>
         <div class="start-tip"><strong>?</strong><span>提示和道具</span></div>
       </div>
+
+      <div class="level-map" aria-label="关卡地图">
+        <div class="level-map-title">选择关卡</div>
+        <div class="level-grid" id="startLevelGrid"></div>
+      </div>
     </div>
   </section>
 
@@ -1082,6 +1156,7 @@
         <div class="progress-bar" id="progressBar"></div>
       </div>
       <div class="goals" id="goals"></div>
+      <div class="level-jump" id="levelJump" aria-label="快速选择关卡"></div>
     </section>
 
     <section class="stats panel" aria-label="游戏数据">
@@ -1191,6 +1266,7 @@
       const startScreenEl = document.getElementById("startScreen");
       const startGameBtn = document.getElementById("startGameBtn");
       const continueGameBtn = document.getElementById("continueGameBtn");
+      const startLevelGridEl = document.getElementById("startLevelGrid");
       const boardWrapEl = document.getElementById("boardWrap");
       const scoreEl = document.getElementById("score");
       const movesEl = document.getElementById("moves");
@@ -1199,6 +1275,7 @@
       const messageEl = document.getElementById("message");
       const liveEl = document.getElementById("live");
       const goalsEl = document.getElementById("goals");
+      const levelJumpEl = document.getElementById("levelJump");
       const levelNameEl = document.getElementById("levelName");
       const levelPillEl = document.getElementById("levelPill");
       const progressBarEl = document.getElementById("progressBar");
@@ -1241,6 +1318,7 @@
       let boosterMode = "";
       let boosterCounts = { hammer: 0, shuffle: 0, rainbow: 0 };
       let hintCells = new Set();
+      let levelStartToken = 0;
 
       const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
       const indexOf = (row, col) => row * SIZE + col;
@@ -1380,8 +1458,30 @@
         levelPillEl.textContent = `第 ${levelIndex + 1} / ${LEVELS.length} 关`;
         progressBarEl.style.width = `${Math.min(100, Math.round((score / level.targetScore) * 100))}%`;
         renderGoals();
+        renderLevelButtons();
         updateSoundButton();
         updateBoosterButtons();
+      }
+
+      function createLevelButton(index, compact = false) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "level-chip";
+        button.dataset.level = String(index);
+        button.textContent = compact ? String(index + 1) : `第 ${index + 1} 关`;
+        button.title = LEVELS[index].name;
+        button.classList.toggle("active", index === levelIndex);
+        return button;
+      }
+
+      function renderLevelButtons() {
+        startLevelGridEl.textContent = "";
+        levelJumpEl.textContent = "";
+
+        LEVELS.forEach((_, index) => {
+          startLevelGridEl.appendChild(createLevelButton(index));
+          levelJumpEl.appendChild(createLevelButton(index, true));
+        });
       }
 
       function updateBoosterButtons() {
@@ -2209,6 +2309,7 @@
       function handlePointerDown(event) {
         const tile = event.target.closest(".tile");
         if (!tile || locked || activePointerId !== null) return;
+        if (event.cancelable) event.preventDefault();
 
         activePointerId = event.pointerId;
         try {
@@ -2244,6 +2345,7 @@
 
       function handlePointerMove(event) {
         if (!dragState || event.pointerId !== activePointerId || locked || levelEnded) return;
+        if (event.cancelable) event.preventDefault();
         const deltaX = event.clientX - dragState.startX;
         const deltaY = event.clientY - dragState.startY;
         const distance = Math.hypot(deltaX, deltaY);
@@ -2274,6 +2376,7 @@
 
       function handlePointerUp(event) {
         if (!dragState || event.pointerId !== activePointerId) return;
+        if (event.cancelable) event.preventDefault();
         const first = { row: dragState.row, col: dragState.col };
         const current = { row: dragState.currentRow, col: dragState.currentCol };
         const shouldSwap = dragState.hasMoved && isAdjacent(first, current);
@@ -2293,12 +2396,24 @@
 
       function handlePointerCancel(event) {
         if (event.pointerId !== activePointerId) return;
+        if (event.cancelable) event.preventDefault();
         dragState = null;
         clearDragPreview();
         activePointerId = null;
       }
 
+      function handleLevelSelect(event) {
+        const button = event.target.closest(".level-chip");
+        if (!button) return;
+        const nextIndex = Number(button.dataset.level);
+        if (!Number.isInteger(nextIndex)) return;
+        closeStartScreen();
+        playSound("select");
+        startLevel(nextIndex);
+      }
+
       async function startLevel(index = levelIndex) {
+        const token = ++levelStartToken;
         levelIndex = (index + LEVELS.length) % LEVELS.length;
         const level = getLevel();
         locked = true;
@@ -2318,7 +2433,9 @@
         updateUI();
         announce(`正在准备 ${level.name}：${level.tip}`);
         await sleep(160);
+        if (token !== levelStartToken) return;
         await resolveBoard();
+        if (token !== levelStartToken) return;
         announce(`${level.tip}，拖动相邻果冻开始`);
         locked = false;
         updateUI();
@@ -2333,6 +2450,8 @@
       boardEl.addEventListener("pointermove", handlePointerMove);
       boardEl.addEventListener("pointerup", handlePointerUp);
       boardEl.addEventListener("pointercancel", handlePointerCancel);
+      startLevelGridEl.addEventListener("click", handleLevelSelect);
+      levelJumpEl.addEventListener("click", handleLevelSelect);
       startGameBtn.addEventListener("click", startFromIntro);
       continueGameBtn.addEventListener("click", () => {
         closeStartScreen();
