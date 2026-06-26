@@ -759,6 +759,10 @@
       animation: pop 280ms ease forwards;
     }
 
+    .tile.ice-break {
+      animation: ice-break 340ms ease forwards;
+    }
+
     .tile.flash {
       animation: flash 360ms ease forwards;
     }
@@ -970,6 +974,18 @@
     @keyframes pop {
       35% { transform: scale(1.22) rotate(4deg); }
       to { opacity: 0; transform: scale(.18) rotate(-12deg); }
+    }
+
+    @keyframes ice-break {
+      0% { transform: scale(1); filter: brightness(1.16) saturate(1.12); }
+      38% {
+        transform: scale(1.09) rotate(-2deg);
+        box-shadow:
+          0 0 0 5px rgba(222, 252, 255, .9),
+          0 0 26px rgba(87, 219, 255, .78),
+          inset 0 2px rgba(255, 255, 255, .9);
+      }
+      100% { transform: scale(1); filter: brightness(1); }
     }
 
     @keyframes flash {
@@ -1284,8 +1300,8 @@
         { name: "第 3 关：葡萄风暴", targetScore: 2200, moves: 25, goals: { 3: 14, 4: 10 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "制造 4 连火箭" },
         { name: "第 4 关：樱桃爆裂", targetScore: 3200, moves: 27, goals: { 4: 16, 0: 12, 1: 12 }, boosters: { hammer: 2, shuffle: 1, rainbow: 1 }, tip: "5 连会生成彩虹糖" },
         { name: "第 5 关：彩虹练习场", targetScore: 4700, moves: 30, goals: { 0: 12, 2: 12, 3: 12, 5: 12 }, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "连锁触发特殊果冻" },
-        { name: "第 6 关：薄冰溪谷", targetScore: 5600, moves: 31, goals: { 1: 16, 3: 12 }, iceGoal: 8, iceCount: 10, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "打碎冰晶水果" },
-        { name: "第 7 关：猕猴桃冻原", targetScore: 6500, moves: 31, goals: { 5: 18, 2: 14 }, iceGoal: 10, iceCount: 12, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "冰晶会随水果一起被消除" },
+        { name: "第 6 关：薄冰溪谷", targetScore: 5600, moves: 31, goals: { 1: 16, 3: 12 }, iceGoal: 8, iceCount: 10, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "先打碎冰晶，再消除里面的水果" },
+        { name: "第 7 关：猕猴桃冻原", targetScore: 6500, moves: 31, goals: { 5: 18, 2: 14 }, iceGoal: 10, iceCount: 12, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "冰晶像护盾，第一次命中只破冰" },
         { name: "第 8 关：莓果回旋", targetScore: 7350, moves: 32, goals: { 0: 18, 4: 14, 1: 12 }, iceGoal: 12, iceCount: 14, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "优先制造火箭清冰" },
         { name: "第 9 关：橙光隧道", targetScore: 8200, moves: 32, goals: { 1: 22, 2: 16 }, iceGoal: 14, iceCount: 16, boosters: { hammer: 2, shuffle: 2, rainbow: 1 }, tip: "横竖火箭可以快速扫开冰晶" },
         { name: "第 10 关：星糖实验室", targetScore: 9100, moves: 33, goals: { 3: 18, 5: 18, 0: 12 }, iceGoal: 15, iceCount: 18, boosters: { hammer: 2, shuffle: 2, rainbow: 2 }, tip: "彩虹糖配合目标水果最稳定" },
@@ -1640,12 +1656,18 @@
         for (let row = 0; row < SIZE; row++) {
           let streakStart = 0;
           for (let col = 1; col <= SIZE; col++) {
-            const same = col < SIZE && board[row][col] && board[row][streakStart] && board[row][col].type === board[row][streakStart].type;
+            const same = col < SIZE
+              && !board[row][col]?.justBrokenIce
+              && !board[row][streakStart]?.justBrokenIce
+              && board[row][col]
+              && board[row][streakStart]
+              && board[row][col].type === board[row][streakStart].type;
             if (!same) {
               const length = col - streakStart;
-              if (board[row][streakStart] && length >= 3) {
+              if (!board[row][streakStart]?.justBrokenIce && board[row][streakStart] && length >= 3) {
                 const cells = [];
                 for (let c = streakStart; c < col; c++) {
+                  if (board[row][c]?.justBrokenIce) continue;
                   matched.add(keyOf(row, c));
                   cells.push({ row, col: c });
                 }
@@ -1659,12 +1681,18 @@
         for (let col = 0; col < SIZE; col++) {
           let streakStart = 0;
           for (let row = 1; row <= SIZE; row++) {
-            const same = row < SIZE && board[row][col] && board[streakStart][col] && board[row][col].type === board[streakStart][col].type;
+            const same = row < SIZE
+              && !board[row][col]?.justBrokenIce
+              && !board[streakStart][col]?.justBrokenIce
+              && board[row][col]
+              && board[streakStart][col]
+              && board[row][col].type === board[streakStart][col].type;
             if (!same) {
               const length = row - streakStart;
-              if (board[streakStart][col] && length >= 3) {
+              if (!board[streakStart][col]?.justBrokenIce && board[streakStart][col] && length >= 3) {
                 const cells = [];
                 for (let r = streakStart; r < row; r++) {
+                  if (board[r][col]?.justBrokenIce) continue;
                   matched.add(keyOf(r, col));
                   cells.push({ row: r, col });
                 }
@@ -1808,17 +1836,26 @@
         matches.forEach((key) => {
           const [row, col] = key.split(",").map(Number);
           const tile = getTile(row, col);
-          if (tile) tile.classList.add(mode);
+          const cell = board[row][col];
+          if (!tile) return;
+          tile.classList.add(cell?.ice ? "ice-break" : mode);
         });
         await sleep(ANIMATION_MS);
       }
 
       function collectAndRemove(matches, keepSpecials) {
+        let brokenIce = 0;
         matches.forEach((key) => {
           const [row, col] = key.split(",").map(Number);
           const cell = board[row][col];
           if (!cell) return;
-          if (cell.ice) collectedIce += 1;
+          if (cell.ice) {
+            cell.ice = 0;
+            cell.justBrokenIce = true;
+            collectedIce += 1;
+            brokenIce += 1;
+            return;
+          }
           if (keepSpecials.has(key)) return;
           collected[cell.type] = (collected[cell.type] || 0) + 1;
           board[row][col] = null;
@@ -1826,8 +1863,25 @@
 
         keepSpecials.forEach((special, key) => {
           const [row, col] = key.split(",").map(Number);
-          if (board[row][col]?.ice) collectedIce += 1;
+          const hadIce = Boolean(board[row][col]?.ice);
+          if (board[row][col]?.ice) {
+            board[row][col].ice = 0;
+            collectedIce += 1;
+            brokenIce += 1;
+          }
           board[row][col] = createCell(special.type, special.special, 0);
+          if (hadIce) board[row][col].justBrokenIce = true;
+        });
+
+        return {
+          brokenIce,
+          removedCount: matches.size - brokenIce - keepSpecials.size
+        };
+      }
+
+      function clearBrokenIceProtection() {
+        board.flat().forEach((cell) => {
+          if (cell) delete cell.justBrokenIce;
         });
       }
 
@@ -1913,10 +1967,21 @@
           createdSpecials.forEach((_, key) => matches.delete(key));
           bestCombo = Math.max(bestCombo, combo);
 
-          const gained = matches.size * 10 * combo + expanded.specialCount * 80;
+          const iceHits = [...matches].filter((key) => {
+            const [row, col] = key.split(",").map(Number);
+            return board[row][col]?.ice;
+          }).length + [...createdSpecials.keys()].filter((key) => {
+            const [row, col] = key.split(",").map(Number);
+            return board[row][col]?.ice;
+          }).length;
+          const removedCount = Math.max(0, matches.size - iceHits);
+          const iceBonus = iceHits * 35 * combo;
+          const gained = removedCount * 10 * combo + expanded.specialCount * 80 + iceBonus;
           score += gained;
           updateUI();
-          announce(`连击 x${combo}，消除 ${matches.size} 个，+${gained}`);
+          announce(iceHits > 0
+            ? `连击 x${combo}，破冰 ${iceHits} 个，消除 ${removedCount} 个，+${gained}`
+            : `连击 x${combo}，消除 ${removedCount} 个，+${gained}`);
           triggerBoardBurst();
           spawnEffects(matches, `+${gained}`, combo, expanded.specialCount);
           showComboBanner(combo, gained, expanded.specialCount);
@@ -1925,7 +1990,15 @@
           bumpStats(scoreEl, comboEl, specialsEl);
 
           await animateMatches(matches, expanded.specialCount ? "flash" : "pop");
-          collectAndRemove(matches, createdSpecials);
+          const result = collectAndRemove(matches, createdSpecials);
+          const brokenIce = result.brokenIce;
+          if (brokenIce > 0) {
+            announce(`连击 x${combo}，打碎冰晶 ${brokenIce} 个，+${gained}`);
+            showToast(`破冰 +${iceBonus}`);
+            spawnIceEffects(matches);
+            playSound("special", Math.max(2, brokenIce));
+            bumpStats(scoreEl);
+          }
           const dropped = collapseBoard();
           render(dropped);
           updateUI();
@@ -1939,6 +2012,7 @@
         if (combo > 0) {
           announce(`棋盘稳定，最高连击 x${bestCombo}`);
         }
+        clearBrokenIceProtection();
         await ensurePlayableBoard();
       }
 
@@ -2025,6 +2099,42 @@
               effectsEl.appendChild(shockwave);
               shockwave.addEventListener("animationend", () => shockwave.remove(), { once: true });
             }
+          }
+        });
+      }
+
+      function spawnIceEffects(matches) {
+        [...matches].slice(0, 20).forEach((key, i) => {
+          const [row, col] = key.split(",").map(Number);
+          const tile = getTile(row, col);
+          if (!tile) return;
+          const rect = tile.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+
+          for (let n = 0; n < 7; n++) {
+            const shard = document.createElement("span");
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 28 + Math.random() * 44;
+            shard.className = "spark";
+            shard.style.setProperty("--x", `${x}px`);
+            shard.style.setProperty("--y", `${y}px`);
+            shard.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+            shard.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+            shard.style.setProperty("--rotate", `${Math.round(angle * 57.3)}deg`);
+            shard.style.setProperty("--color", n % 2 ? "#dffcff" : "#62dfff");
+            effectsEl.appendChild(shard);
+            shard.addEventListener("animationend", () => shard.remove(), { once: true });
+          }
+
+          if (i === 0) {
+            const floatScore = document.createElement("span");
+            floatScore.className = "float-score";
+            floatScore.textContent = "破冰!";
+            floatScore.style.setProperty("--x", `${x}px`);
+            floatScore.style.setProperty("--y", `${y}px`);
+            effectsEl.appendChild(floatScore);
+            floatScore.addEventListener("animationend", () => floatScore.remove(), { once: true });
           }
         });
       }
@@ -2146,18 +2256,28 @@
 
         const expanded = expandSpecials(base, null);
         const matches = expanded.cells;
-        const gained = matches.size * 15 + expanded.specialCount * 80;
+        const iceHits = [...matches].filter((key) => {
+          const [r, c] = key.split(",").map(Number);
+          return board[r][c]?.ice;
+        }).length;
+        const removedCount = Math.max(0, matches.size - iceHits);
+        const gained = removedCount * 15 + iceHits * 45 + expanded.specialCount * 80;
         score += gained;
         specialsTriggered += 1;
         updateUI();
-        announce(`锤子粉碎 ${matches.size} 个，+${gained}`);
+        announce(iceHits > 0 ? `锤子破冰 ${iceHits} 个，粉碎 ${removedCount} 个，+${gained}` : `锤子粉碎 ${removedCount} 个，+${gained}`);
         spawnEffects(matches, `+${gained}`, 2, Math.max(1, expanded.specialCount));
         showComboBanner(2, gained, Math.max(1, expanded.specialCount));
         triggerBoardBurst();
         triggerScreenShake(2, 1);
         playSound("special", 2);
         await animateMatches(matches, "flash");
-        collectAndRemove(matches, new Map());
+        const result = collectAndRemove(matches, new Map());
+        if (result.brokenIce > 0) {
+          announce(`锤子打碎冰晶 ${result.brokenIce} 个，+${gained}`);
+          showToast(`破冰 +${result.brokenIce * 45}`);
+          spawnIceEffects(matches);
+        }
         const dropped = collapseBoard();
         render(dropped);
         await sleep(ANIMATION_MS);
@@ -2441,6 +2561,13 @@
         activePointerId = null;
       }
 
+      function handleBoardClick(event) {
+        if (boosterMode !== "hammer" || locked || levelEnded) return;
+        const tile = event.target.closest(".tile");
+        if (!tile) return;
+        useHammer(Number(tile.dataset.row), Number(tile.dataset.col));
+      }
+
       function handleLevelSelect(event) {
         const button = event.target.closest(".level-chip");
         if (!button) return;
@@ -2489,6 +2616,7 @@
       boardEl.addEventListener("pointermove", handlePointerMove);
       boardEl.addEventListener("pointerup", handlePointerUp);
       boardEl.addEventListener("pointercancel", handlePointerCancel);
+      boardEl.addEventListener("click", handleBoardClick);
       startLevelGridEl.addEventListener("click", handleLevelSelect);
       levelJumpEl.addEventListener("click", handleLevelSelect);
       startGameBtn.addEventListener("click", startFromIntro);
