@@ -1364,6 +1364,7 @@
       let levelIndex = 0;
       let collected = {};
       let collectedIce = 0;
+      let iceBoard = [];
       let locked = false;
       let levelEnded = false;
       let activePointerId = null;
@@ -1383,8 +1384,8 @@
       const isAdjacent = (a, b) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
       const getLevel = () => LEVELS[levelIndex];
 
-      function createCell(type = randomType(), special = SPECIAL_NONE, ice = 0) {
-        return { type, special, ice };
+      function createCell(type = randomType(), special = SPECIAL_NONE) {
+        return { type, special };
       }
 
       function createBoard() {
@@ -1404,6 +1405,7 @@
         }
 
         board = next;
+        iceBoard = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
         applyIceToBoard();
       }
 
@@ -1427,7 +1429,7 @@
           .sort((a, b) => a.weight - b.weight)
           .slice(0, iceCount)
           .forEach(({ row, col }) => {
-            board[row][col].ice = 1;
+            iceBoard[row][col] = 1;
           });
       }
 
@@ -1453,7 +1455,7 @@
             tile.setAttribute("aria-label", `${row + 1}行${col + 1}列，${tileData.name}${specialName(cell.special)}`);
             tile.textContent = cell.special === SPECIAL_COLOR ? "🌈" : tileData.icon;
 
-            if (cell.ice) {
+            if (iceBoard[row][col]) {
               const iceLayer = document.createElement("span");
               tile.classList.add("iced");
               iceLayer.className = "ice-layer";
@@ -1657,17 +1659,14 @@
           let streakStart = 0;
           for (let col = 1; col <= SIZE; col++) {
             const same = col < SIZE
-              && !board[row][col]?.justBrokenIce
-              && !board[row][streakStart]?.justBrokenIce
               && board[row][col]
               && board[row][streakStart]
               && board[row][col].type === board[row][streakStart].type;
             if (!same) {
               const length = col - streakStart;
-              if (!board[row][streakStart]?.justBrokenIce && board[row][streakStart] && length >= 3) {
+              if (board[row][streakStart] && length >= 3) {
                 const cells = [];
                 for (let c = streakStart; c < col; c++) {
-                  if (board[row][c]?.justBrokenIce) continue;
                   matched.add(keyOf(row, c));
                   cells.push({ row, col: c });
                 }
@@ -1682,17 +1681,14 @@
           let streakStart = 0;
           for (let row = 1; row <= SIZE; row++) {
             const same = row < SIZE
-              && !board[row][col]?.justBrokenIce
-              && !board[streakStart][col]?.justBrokenIce
               && board[row][col]
               && board[streakStart][col]
               && board[row][col].type === board[streakStart][col].type;
             if (!same) {
               const length = row - streakStart;
-              if (!board[streakStart][col]?.justBrokenIce && board[streakStart][col] && length >= 3) {
+              if (board[streakStart][col] && length >= 3) {
                 const cells = [];
                 for (let r = streakStart; r < row; r++) {
-                  if (board[r][col]?.justBrokenIce) continue;
                   matched.add(keyOf(r, col));
                   cells.push({ row: r, col });
                 }
@@ -1836,9 +1832,8 @@
         matches.forEach((key) => {
           const [row, col] = key.split(",").map(Number);
           const tile = getTile(row, col);
-          const cell = board[row][col];
           if (!tile) return;
-          tile.classList.add(cell?.ice ? "ice-break" : mode);
+          tile.classList.add(iceBoard[row][col] ? "ice-break" : mode);
         });
         await sleep(ANIMATION_MS);
       }
@@ -1849,9 +1844,8 @@
           const [row, col] = key.split(",").map(Number);
           const cell = board[row][col];
           if (!cell) return;
-          if (cell.ice) {
-            cell.ice = 0;
-            cell.justBrokenIce = true;
+          if (iceBoard[row][col]) {
+            iceBoard[row][col] = 0;
             collectedIce += 1;
             brokenIce += 1;
             return;
@@ -1863,14 +1857,12 @@
 
         keepSpecials.forEach((special, key) => {
           const [row, col] = key.split(",").map(Number);
-          const hadIce = Boolean(board[row][col]?.ice);
-          if (board[row][col]?.ice) {
-            board[row][col].ice = 0;
+          if (iceBoard[row][col]) {
+            iceBoard[row][col] = 0;
             collectedIce += 1;
             brokenIce += 1;
           }
-          board[row][col] = createCell(special.type, special.special, 0);
-          if (hadIce) board[row][col].justBrokenIce = true;
+          board[row][col] = createCell(special.type, special.special);
         });
 
         return {
@@ -1880,9 +1872,7 @@
       }
 
       function clearBrokenIceProtection() {
-        board.flat().forEach((cell) => {
-          if (cell) delete cell.justBrokenIce;
-        });
+        // 冰层固定在格子上，不再需要随水果移动的保护标记。
       }
 
       function collapseBoard() {
@@ -1969,10 +1959,10 @@
 
           const iceHits = [...matches].filter((key) => {
             const [row, col] = key.split(",").map(Number);
-            return board[row][col]?.ice;
+            return iceBoard[row][col];
           }).length + [...createdSpecials.keys()].filter((key) => {
             const [row, col] = key.split(",").map(Number);
-            return board[row][col]?.ice;
+            return iceBoard[row][col];
           }).length;
           const removedCount = Math.max(0, matches.size - iceHits);
           const iceBonus = iceHits * 35 * combo;
@@ -2228,7 +2218,7 @@
         boosterCounts.rainbow -= 1;
         boosterMode = "";
         hintCells.clear();
-        board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR, cell.ice || 0);
+        board[target.row][target.col] = createCell(cell.type, SPECIAL_COLOR);
         render();
         updateUI();
         showToast("彩虹糖已放入棋盘");
@@ -2258,7 +2248,7 @@
         const matches = expanded.cells;
         const iceHits = [...matches].filter((key) => {
           const [r, c] = key.split(",").map(Number);
-          return board[r][c]?.ice;
+          return iceBoard[r][c];
         }).length;
         const removedCount = Math.max(0, matches.size - iceHits);
         const gained = removedCount * 15 + iceHits * 45 + expanded.specialCount * 80;
