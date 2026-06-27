@@ -1452,7 +1452,7 @@
             tile.style.setProperty("--c1", tileData.c1);
             tile.style.setProperty("--c2", tileData.c2);
             tile.setAttribute("role", "gridcell");
-            tile.setAttribute("aria-label", `${row + 1}行${col + 1}列，${tileData.name}${specialName(cell.special)}`);
+            tile.setAttribute("aria-label", `${row + 1}行${col + 1}列，${tileData.name}${specialName(cell.special)}${iceBoard[row][col] ? "，冰晶冻结不可移动" : ""}`);
             tile.textContent = cell.special === SPECIAL_COLOR ? "🌈" : tileData.icon;
 
             if (iceBoard[row][col]) {
@@ -1621,6 +1621,10 @@
         board[b.row][b.col] = temp;
       }
 
+      function isFrozen(row, col) {
+        return Boolean(iceBoard[row]?.[col]);
+      }
+
       function findValidMove() {
         const directions = [
           { row: 0, col: 1 },
@@ -1633,6 +1637,7 @@
               const next = { row: row + direction.row, col: col + direction.col };
               if (!inBounds(next.row, next.col)) continue;
               const first = { row, col };
+              if (isFrozen(first.row, first.col) || isFrozen(next.row, next.col)) continue;
               const a = board[first.row][first.col];
               const b = board[next.row][next.col];
               if (a.special || b.special) return [first, next];
@@ -1645,6 +1650,7 @@
       }
 
       function wouldMatchAfterSwap(first, second) {
+        if (isFrozen(first.row, first.col) || isFrozen(second.row, second.col)) return false;
         swapCells(first, second);
         const hasMatch = findMatches().matched.size > 0;
         swapCells(first, second);
@@ -1879,16 +1885,27 @@
         const dropped = new Set();
 
         for (let col = 0; col < SIZE; col++) {
-          const kept = [];
-          for (let row = SIZE - 1; row >= 0; row--) {
-            if (board[row][col]) kept.push(board[row][col]);
-          }
+          let segmentBottom = SIZE - 1;
+          while (segmentBottom >= 0) {
+            while (segmentBottom >= 0 && isFrozen(segmentBottom, col)) segmentBottom -= 1;
+            if (segmentBottom < 0) break;
 
-          for (let row = SIZE - 1; row >= 0; row--) {
-            const sourceIndex = SIZE - 1 - row;
-            const nextValue = kept[sourceIndex] || createCell(randomType());
-            if (board[row][col] !== nextValue || row < SIZE - kept.length) dropped.add(keyOf(row, col));
-            board[row][col] = nextValue;
+            let segmentTop = segmentBottom;
+            while (segmentTop >= 0 && !isFrozen(segmentTop, col)) segmentTop -= 1;
+
+            const kept = [];
+            for (let row = segmentBottom; row > segmentTop; row--) {
+              if (board[row][col]) kept.push(board[row][col]);
+            }
+
+            for (let row = segmentBottom; row > segmentTop; row--) {
+              const sourceIndex = segmentBottom - row;
+              const nextValue = kept[sourceIndex] || createCell(randomType());
+              if (board[row][col] !== nextValue || sourceIndex >= kept.length) dropped.add(keyOf(row, col));
+              board[row][col] = nextValue;
+            }
+
+            segmentBottom = segmentTop - 1;
           }
         }
 
@@ -1904,15 +1921,22 @@
       }
 
       function shuffleBoard() {
-        const cells = shuffleArray(board.flat().filter(Boolean));
+        const movableSlots = [];
+        const cells = [];
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            if (isFrozen(row, col)) continue;
+            movableSlots.push({ row, col });
+            if (board[row][col]) cells.push(board[row][col]);
+          }
+        }
 
         for (let attempt = 0; attempt < 50; attempt++) {
           const shuffled = shuffleArray([...cells]);
-          for (let row = 0; row < SIZE; row++) {
-            for (let col = 0; col < SIZE; col++) {
-              board[row][col] = shuffled[indexOf(row, col)];
-            }
-          }
+          movableSlots.forEach(({ row, col }, index) => {
+            board[row][col] = shuffled[index];
+          });
 
           if (findMatches().matched.size === 0 && findValidMove()) {
             return true;
@@ -2411,6 +2435,13 @@
 
         hintCells.clear();
 
+        if (isFrozen(first.row, first.col) || isFrozen(current.row, current.col)) {
+          announce("冰晶格被冻结，不能移动或交换");
+          showToast("冰晶不能动");
+          playSound("fail");
+          return;
+        }
+
         if (!isAdjacent(first, current)) {
           announce("请拖到上下左右相邻的水果");
           playSound("fail");
@@ -2476,6 +2507,14 @@
           return;
         }
 
+        if (isFrozen(row, col)) {
+          announce("冰晶格被冻结，先用锤子或特殊果冻破冰");
+          showToast("冰晶不能拖动");
+          playSound("fail");
+          activePointerId = null;
+          return;
+        }
+
         initAudio();
         hintCells.clear();
         dragState = {
@@ -2509,7 +2548,7 @@
           col: dragState.col + (horizontal ? Math.sign(deltaX) : 0)
         };
 
-        if (!inBounds(target.row, target.col)) {
+        if (!inBounds(target.row, target.col) || isFrozen(target.row, target.col)) {
           dragState.currentRow = dragState.row;
           dragState.currentCol = dragState.col;
           dragState.hasMoved = false;
