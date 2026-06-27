@@ -1845,40 +1845,107 @@
       }
 
       function collectAndRemove(matches, keepSpecials) {
-        let brokenIce = 0;
+        const directIce = new Set();
+        const adjacentIce = new Set();
+        const removedCells = [];
+
         matches.forEach((key) => {
           const [row, col] = key.split(",").map(Number);
           const cell = board[row][col];
           if (!cell) return;
           if (iceBoard[row][col]) {
-            iceBoard[row][col] = 0;
-            collectedIce += 1;
-            brokenIce += 1;
+            directIce.add(key);
             return;
           }
           if (keepSpecials.has(key)) return;
           collected[cell.type] = (collected[cell.type] || 0) + 1;
           board[row][col] = null;
+          removedCells.push({ row, col });
         });
 
         keepSpecials.forEach((special, key) => {
           const [row, col] = key.split(",").map(Number);
           if (iceBoard[row][col]) {
-            iceBoard[row][col] = 0;
-            collectedIce += 1;
-            brokenIce += 1;
+            directIce.add(key);
           }
           board[row][col] = createCell(special.type, special.special);
+          removedCells.push({ row, col });
+        });
+
+        removedCells.forEach(({ row, col }) => {
+          [
+            { row: row - 1, col },
+            { row: row + 1, col },
+            { row, col: col - 1 },
+            { row, col: col + 1 }
+          ].forEach((cell) => {
+            if (!inBounds(cell.row, cell.col) || !iceBoard[cell.row][cell.col]) return;
+            const key = keyOf(cell.row, cell.col);
+            if (!directIce.has(key)) adjacentIce.add(key);
+          });
+        });
+
+        const brokenKeys = new Set([...directIce, ...adjacentIce]);
+        brokenKeys.forEach((key) => {
+          const [row, col] = key.split(",").map(Number);
+          iceBoard[row][col] = 0;
+          collectedIce += 1;
         });
 
         return {
-          brokenIce,
-          removedCount: matches.size - brokenIce - keepSpecials.size
+          brokenIce: brokenKeys.size,
+          brokenKeys,
+          directIce,
+          adjacentIce,
+          removedCount: removedCells.length
         };
       }
 
       function clearBrokenIceProtection() {
         // 冰层固定在格子上，不再需要随水果移动的保护标记。
+      }
+
+      function previewIceBreaks(matches, keepSpecials = new Map()) {
+        const directIce = new Set();
+        const removedCells = [];
+
+        matches.forEach((key) => {
+          const [row, col] = key.split(",").map(Number);
+          if (!board[row][col]) return;
+          if (iceBoard[row][col]) {
+            directIce.add(key);
+            return;
+          }
+          if (keepSpecials.has(key)) return;
+          removedCells.push({ row, col });
+        });
+
+        keepSpecials.forEach((_, key) => {
+          const [row, col] = key.split(",").map(Number);
+          if (iceBoard[row][col]) directIce.add(key);
+          removedCells.push({ row, col });
+        });
+
+        const adjacentIce = new Set();
+        removedCells.forEach(({ row, col }) => {
+          [
+            { row: row - 1, col },
+            { row: row + 1, col },
+            { row, col: col - 1 },
+            { row, col: col + 1 }
+          ].forEach((cell) => {
+            if (!inBounds(cell.row, cell.col) || !iceBoard[cell.row][cell.col]) return;
+            const key = keyOf(cell.row, cell.col);
+            if (!directIce.has(key)) adjacentIce.add(key);
+          });
+        });
+
+        return {
+          directIce,
+          adjacentIce,
+          brokenKeys: new Set([...directIce, ...adjacentIce]),
+          removedCount: removedCells.length
+        };
       }
 
       function collapseBoard() {
@@ -1981,14 +2048,9 @@
           createdSpecials.forEach((_, key) => matches.delete(key));
           bestCombo = Math.max(bestCombo, combo);
 
-          const iceHits = [...matches].filter((key) => {
-            const [row, col] = key.split(",").map(Number);
-            return iceBoard[row][col];
-          }).length + [...createdSpecials.keys()].filter((key) => {
-            const [row, col] = key.split(",").map(Number);
-            return iceBoard[row][col];
-          }).length;
-          const removedCount = Math.max(0, matches.size - iceHits);
+          const icePreview = previewIceBreaks(matches, createdSpecials);
+          const iceHits = icePreview.brokenKeys.size;
+          const removedCount = icePreview.removedCount;
           const iceBonus = iceHits * 35 * combo;
           const gained = removedCount * 10 * combo + expanded.specialCount * 80 + iceBonus;
           score += gained;
@@ -2009,7 +2071,7 @@
           if (brokenIce > 0) {
             announce(`连击 x${combo}，打碎冰晶 ${brokenIce} 个，+${gained}`);
             showToast(`破冰 +${iceBonus}`);
-            spawnIceEffects(matches);
+            spawnIceEffects(result.brokenKeys);
             playSound("special", Math.max(2, brokenIce));
             bumpStats(scoreEl);
           }
@@ -2290,7 +2352,7 @@
         if (result.brokenIce > 0) {
           announce(`锤子打碎冰晶 ${result.brokenIce} 个，+${gained}`);
           showToast(`破冰 +${result.brokenIce * 45}`);
-          spawnIceEffects(matches);
+          spawnIceEffects(result.brokenKeys);
         }
         const dropped = collapseBoard();
         render(dropped);
